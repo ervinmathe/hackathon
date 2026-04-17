@@ -271,27 +271,31 @@
         <!-- CALENDAR -->
         <section id="calendar">
             <h2>Naptár moderálása</h2>
+            
+            <h3>Mentális egészség események</h3>
             <div class="search-container">
-                <input type="text" placeholder="Keresés..." onkeyup="filterTable('events-table', this.value)">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('events-mental-table', this.value)">
             </div>
             <div class="scroll-x">
-                <table id="events-table">
+                <table id="events-mental-table">
                     <thead>
                         <tr>
                             <th>Esemény</th>
                             <th>Szerző</th>
                             <th>Kezdés</th>
+                            <th>Típus</th>
                             <th>Állapot</th>
                             <th>Műveletek</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <% calendar.forEach(e => { %>
-                            <tr style="<%= !e.is_approved ? 'background-color: #fff3e0;' : '' %>">
+                        <% calendar.filter(e => e.category === 'MENTAL').forEach(e => { %>
+                            <tr id="event-row-<%= e.id %>" style="<%= !e.is_approved ? 'background-color: #fff3e0;' : '' %>">
                                 <td><%= e.title %></td>
                                 <td><%= e.author_name %></td>
                                 <td><%= new Date(e.start_time).toLocaleString() %></td>
-                                <td>
+                                <td><span class="badge" style="background: #e1f5fe; color: #0288d1;">MENTAL</span></td>
+                                <td class="status-cell">
                                     <% if (e.is_approved) { %>
                                         <span class="badge" style="background: #c8e6c9;">Approved</span>
                                     <% } else { %>
@@ -300,7 +304,49 @@
                                 </td>
                                 <td class="actions">
                                     <% if (!e.is_approved) { %>
-                                        <button class="outline" onclick="approveEvent('<%= e.id %>')">Jóváhagyás</button>
+                                        <button class="outline approve-btn" onclick="approveEvent('<%= e.id %>')">Jóváhagyás</button>
+                                    <% } %>
+                                    <button class="outline contrast" onclick="deleteItem('events', '<%= e.id %>')">Törlés</button>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 style="margin-top: 3rem;">Fizikai aktivitás események</h3>
+            <div class="search-container">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('events-physical-table', this.value)">
+            </div>
+            <div class="scroll-x">
+                <table id="events-physical-table">
+                    <thead>
+                        <tr>
+                            <th>Esemény</th>
+                            <th>Szerző</th>
+                            <th>Kezdés</th>
+                            <th>Típus</th>
+                            <th>Állapot</th>
+                            <th>Műveletek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% calendar.filter(e => e.category === 'PHYSICAL').forEach(e => { %>
+                            <tr id="event-row-<%= e.id %>" style="<%= !e.is_approved ? 'background-color: #fff3e0;' : '' %>">
+                                <td><%= e.title %></td>
+                                <td><%= e.author_name %></td>
+                                <td><%= new Date(e.start_time).toLocaleString() %></td>
+                                <td><span class="badge" style="background: #f1f8e9; color: #388e3c;">PHYSICAL</span></td>
+                                <td class="status-cell">
+                                    <% if (e.is_approved) { %>
+                                        <span class="badge" style="background: #c8e6c9;">Approved</span>
+                                    <% } else { %>
+                                        <span class="badge" style="background: #ffe0b2;">Pending</span>
+                                    <% } %>
+                                </td>
+                                <td class="actions">
+                                    <% if (!e.is_approved) { %>
+                                        <button class="outline approve-btn" onclick="approveEvent('<%= e.id %>')">Jóváhagyás</button>
                                     <% } %>
                                     <button class="outline contrast" onclick="deleteItem('events', '<%= e.id %>')">Törlés</button>
                                 </td>
@@ -335,7 +381,15 @@
             if (!confirm('Biztosan törölni szeretnéd?')) return;
             const res = await fetch(`/admin/${resource}/${id}`, { method: 'DELETE' });
             if (res.ok) {
-                location.reload();
+                // If the row has an ID like 'event-row-uuid', remove it
+                const rowId = resource === 'events' ? `event-row-${id}` : `${resource}-row-${id}`;
+                const row = document.getElementById(rowId);
+                if (row) {
+                    row.remove();
+                } else {
+                    // Fallback for rows without ID yet
+                    location.reload();
+                }
             } else {
                 alert('Hiba történt a törlés során.');
             }
@@ -358,7 +412,20 @@
             if (!confirm('Biztosan jóváhagyod ezt az eseményt?')) return;
             const res = await fetch(`/admin/events/${id}/approve`, { method: 'PATCH' });
             if (res.ok) {
-                location.reload();
+                const row = document.getElementById(`event-row-${id}`);
+                if (row) {
+                    row.style.backgroundColor = '';
+                    const statusCell = row.querySelector('.status-cell');
+                    if (statusCell) {
+                        statusCell.innerHTML = '<span class="badge" style="background: #c8e6c9;">Approved</span>';
+                    }
+                    const approveBtn = row.querySelector('.approve-btn');
+                    if (approveBtn) {
+                        approveBtn.remove();
+                    }
+                } else {
+                    location.reload();
+                }
             } else {
                 alert('Hiba történt a jóváhagyás során.');
             }

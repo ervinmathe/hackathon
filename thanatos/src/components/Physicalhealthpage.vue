@@ -12,7 +12,7 @@ function loadGoogleMaps() {
 </script>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api/api'
 import { useAuthStore } from '../stores/auth'
@@ -26,6 +26,29 @@ const isLoading = ref(false)
 const userCoords = ref(null)
 const locationError = ref(null)
 const places = ref([])
+const showCreateEventModal = ref(false)
+const isSubmitting = ref(false)
+let pollingInterval = null
+
+const newEvent = ref({
+    title: '',
+    description: '',
+    location: '',
+    start_date: '',
+    start_time: '',
+    end_date: '',
+    end_time: ''
+})
+
+onMounted(async () => {
+    getLocationAndSearch()
+    fetchEvents()
+    pollingInterval = setInterval(fetchEvents, 10000)
+})
+
+onBeforeUnmount(() => {
+    if (pollingInterval) clearInterval(pollingInterval)
+})
 
 const categories = [
   'All',
@@ -164,6 +187,44 @@ const handleLogout = () => {
     authStore.logout(router)
 }
 
+const submitEvent = async () => {
+    if (!newEvent.value.title.trim() || !newEvent.value.start_date || !newEvent.value.start_time) {
+        alert('Title, Start Date and Start Time are required!')
+        return
+    }
+    const startFull = `${newEvent.value.start_date}T${newEvent.value.start_time}`
+    const endFull = (newEvent.value.end_date && newEvent.value.end_time) ? `${newEvent.value.end_date}T${newEvent.value.end_time}` : null
+    if (endFull && new Date(endFull) <= new Date(startFull)) {
+        alert('End time must be after start time!')
+        return
+    }
+    if (isSubmitting.value) return
+    isSubmitting.value = true
+    try {
+        const userId = authStore.user?.id
+        if (!userId) { isSubmitting.value = false; return; }
+        await api.post('/calendar', {
+            title: newEvent.value.title,
+            description: newEvent.value.description,
+            location: newEvent.value.location,
+            start_time: startFull,
+            end_time: endFull,
+            category: 'PHYSICAL',
+            created_by: userId,
+            university_id: authStore.user.university_id,
+            enrollment_id: authStore.user.enrollment_id
+        })
+        showCreateEventModal.value = false
+        newEvent.value = { title: '', description: '', location: '', start_date: '', start_time: '', end_date: '', end_time: '' }
+        fetchEvents()
+        alert('Event submitted for approval!')
+    } catch (err) {
+        console.error('Failed to create event', err)
+    } finally {
+        isSubmitting.value = false
+    }
+}
+
 onMounted(async () => {
     getLocationAndSearch()
     fetchEvents()
@@ -269,6 +330,7 @@ function setcategoryAndQuerry(cat) {
                 <template v-else>
                     <div class="content__header">
                         <div><h2 class="content__title">Activity Events</h2><p class="content__sub">Join community meetups within your area</p></div>
+                        <button class="propose-btn" @click="showCreateEventModal = true">+ Propose Event</button>
                     </div>
                     <div class="events-grid">
                         <div v-for="ev in events" :key="ev.id" class="event-card">
@@ -300,6 +362,56 @@ function setcategoryAndQuerry(cat) {
                     </div>
                 </div>
             </aside>
+        </div>
+
+        <!-- CREATE EVENT MODAL -->
+        <div v-if="showCreateEventModal" class="modal-overlay" @click.self="showCreateEventModal = false">
+            <div class="modal-card">
+                <div class="modal-head">
+                    <h3>Propose Physical Event</h3>
+                    <button class="close-btn" @click="showCreateEventModal = false">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group">
+                        <label class="modal-label">Event Name</label>
+                        <input v-model="newEvent.title" placeholder="e.g. Morning Run" class="modal-input" />
+                    </div>
+                    <div class="input-group">
+                        <label class="modal-label">Location</label>
+                        <input v-model="newEvent.location" placeholder="Park, Gym, etc." class="modal-input" />
+                    </div>
+                    <div class="input-group">
+                        <label class="modal-label">Description</label>
+                        <textarea v-model="newEvent.description" placeholder="Details..." class="modal-textarea" style="min-height: 80px;"></textarea>
+                    </div>
+                    
+                    <div class="modal-grid">
+                        <div class="input-group">
+                            <label class="modal-label">Start Date</label>
+                            <input v-model="newEvent.start_date" type="date" class="modal-input" />
+                        </div>
+                        <div class="input-group">
+                            <label class="modal-label">Start Time</label>
+                            <input v-model="newEvent.start_time" type="time" class="modal-input" />
+                        </div>
+                    </div>
+                    
+                    <div class="modal-grid">
+                        <div class="input-group">
+                            <label class="modal-label">End Date (optional)</label>
+                            <input v-model="newEvent.end_date" type="date" class="modal-input" />
+                        </div>
+                        <div class="input-group">
+                            <label class="modal-label">End Time (optional)</label>
+                            <input v-model="newEvent.end_time" type="time" class="modal-input" />
+                        </div>
+                    </div>
+                    
+                    <button class="submit-btn" :disabled="isSubmitting" @click="submitEvent" style="margin-top: 10px;">
+                        {{ isSubmitting ? 'Submitting...' : 'Submit for Approval' }}
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </template>
@@ -360,4 +472,21 @@ function setcategoryAndQuerry(cat) {
 @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 0.8; } 100% { opacity: 0.5; } }
 .meta-row { margin-bottom: 4px; }
 .avatar { width: 34px; height: 34px; border-radius: 50%; background: #1e2d45; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); }
+.propose-btn { padding: 10px 20px; border-radius: 100px; background: #5ee7b0; color: #080b12; border: none; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.propose-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(94, 231, 176, 0.3); }
+.content__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+.modal-card { background: #111722; border: 1px solid rgba(255,255,255,0.08); border-radius: 28px; width: 100%; max-width: 520px; padding: 32px; box-shadow: 0 40px 100px rgba(0,0,0,0.6); }
+.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.modal-head h3 { font-family: 'Sora', sans-serif; font-size: 20px; color: #fff; }
+.modal-body { display: flex; flex-direction: column; gap: 16px; }
+.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.modal-label { font-size: 11px; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 6px; display: block; letter-spacing: 0.5px; }
+.modal-input, .modal-textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 18px; color: #fff; font-family: inherit; outline: none; transition: border-color 0.2s; color-scheme: dark; }
+.modal-input:focus, .modal-textarea:focus { border-color: #5ee7b0; }
+.modal-textarea { min-height: 100px; resize: vertical; }
+.submit-btn { background: #5ee7b0; color: #080b12; border: none; padding: 16px; border-radius: 14px; font-weight: 700; cursor: pointer; transition: transform 0.2s; }
+.submit-btn:hover { transform: translateY(-2px); }
+.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.close-btn { background: none; border: none; color: #fff; font-size: 32px; cursor: pointer; line-height: 1; }
 </style>

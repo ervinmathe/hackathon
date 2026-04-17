@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api/api'
 import { useAuthStore } from '../stores/auth'
@@ -12,6 +12,7 @@ const showSearch = ref(false)
 
 const allChannels = ref([])
 const events = ref([])
+let pollingInterval = null
 const activeChannel = ref(null)
 const posts = ref([])
 const selectedPost = ref(null)
@@ -285,6 +286,11 @@ const searchResults = computed(() => {
 onMounted(() => {
   fetchMyChannels()
   fetchEvents()
+  pollingInterval = setInterval(fetchEvents, 10000)
+})
+
+onBeforeUnmount(() => {
+  if (pollingInterval) clearInterval(pollingInterval)
 })
 </script>
 
