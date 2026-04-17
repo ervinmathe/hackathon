@@ -1,4 +1,4 @@
-# API & CMS Dokumentáció - Hackathon Backend (v2.1)
+# API & CMS Dokumentáció - Hackathon Backend (v3.0)
 
 Ez a dokumentáció tartalmazza a `thanatos` Vue frontend számára készült publikus API, valamint az adminisztratív CMS végpontjait.
 
@@ -10,65 +10,43 @@ Ez a dokumentáció tartalmazza a `thanatos` Vue frontend számára készült pu
 ### Hitelesítés és Regisztráció (`/auth`)
 *   `GET /auth/universities`: Összes választható egyetem listázása.
 *   `GET /auth/universities/:id/enrollments`: Egy adott egyetemhez tartozó szakok listázása.
-*   `POST /auth/register`: Új felhasználó regisztrálása (`username`, `email`, `password`, `university_id`, `enrollment_id`, `year`).
-*   `POST /auth/login`: Felhasználó bejelentkezés. Visszaadja a felhasználó adatait (id, role, university_id, enrollment_id).
+*   `POST /auth/register`: Új felhasználó regisztrálása.
+*   `POST /auth/login`: Felhasználó bejelentkezés.
+*   `POST /auth/profile/:id`: Felhasználói adatok módosítása (username, email, password, enrollment_id, year).
+
+### Naptár (`/calendar`) - *ÚJ*
+*   `GET /calendar`: Az események (ZH, konzultáció) lekérése.
+    *   **Szűrés:** `?universityId=UUID&enrollmentId=UUID`. Ha csak egyetem van megadva, az összes szak eseményét listázza.
 
 ### Fórumok és Tantárgyak (`/forums`)
-*   `GET /forums`: Lekéri a tantárgyakat (fórumokat).
-    *   **Szűrés:** `?universityId=UUID&enrollmentId=UUID`
-    *   **Keresés:** `?search=szoveg` (min. 3 karakter, case-insensitive, több szavas támogatás).
-*   `GET /forums/:id/posts`: Lekéri az adott tantárgyhoz tartozó összes posztot és fájljaikat.
+*   `GET /forums`: Lekéri a tantárgyakat (fórumokat). Szűrhető és kereshető (`?search=...`).
+*   `GET /forums/:id/posts`: Lekéri az adott tantárgyhoz tartozó összes posztot (rövidített lista).
 
 ### Posztok és Jegyzetek (`/posts`)
-*   `POST /posts`: Új bejegyzés létrehozása. **Multipart/form-data** kérést igényel!
-    *   Mezők: `forum_id`, `author_id`, `title`, `content`, `attachments` (fájlok).
+*   `GET /posts/:id`: **ÚJ!** Egy konkrét poszt részletes megtekintése (tartalom, csatolmányok és az összes hozzászólás egyben).
+*   `POST /posts`: Új bejegyzés létrehozása (Multipart/form-data).
+*   `PATCH /posts/:id`: **ÚJ!** Saját poszt szerkesztése.
+*   `DELETE /posts/:id`: **ÚJ!** Saját poszt törlése.
+*   `DELETE /posts/attachments/:attachmentId`: **ÚJ!** Egy konkrét melléklet törlése a posztból.
 
-### Hozzászólások (`/comments`) - *ÚJ*
-*   `GET /comments/post/:postId`: Lekéri egy adott poszthoz tartozó összes hozzászólást (időrendben, szerző nevével).
-*   `POST /comments`: Új hozzászólás fűzése egy poszthoz.
-    *   Body: `{ "post_id": "UUID", "author_id": "UUID", "content": "Szöveg..." }`
+### Hozzászólások (`/comments`)
+*   `GET /comments/post/:postId`: Lekéri egy poszt hozzászólásait.
+*   `POST /comments`: Új hozzászólás fűzése.
+*   `PATCH /comments/:id`: **ÚJ!** Saját hozzászólás szerkesztése.
+*   `DELETE /comments/:id`: **ÚJ!** Saját hozzászólás törlése.
 
 ---
 
 ## 2. Admin API - CMS Felület (`http://localhost:3001`)
-**Webes felület:** `http://localhost:3001/login`
-**Login:** `admin` / `secret` (alapértelmezett seed adat)
+**Login:** `admin` / `secret`
 **Swagger felület:** `http://localhost:3001/docs`
 
-Az admin felületen keresztül (`/admin` prefixszel) kezelhető a rendszer teljes tartalma (Full CRUD).
-
-### CMS Webes Dashboard
-A `http://localhost:3001/login` oldalon belépve egy grafikus felületen tudod:
-*   Hozzáadni és törölni az egyetemeket és szakokat.
-*   Létrehozni tantárgyakat (fórumokat).
-*   Áttekinteni a regisztrált felhasználókat és moderálni a posztokat.
-
-### Egyetemek kezelése (`/admin/universities`) - *Csak ADMIN*
-*   `GET /admin/universities`: Összes egyetem listázása.
-*   `POST /admin/universities`: Új egyetem hozzáadása.
-*   `DELETE /admin/universities/:id`: Egyetem törlése.
-
-### Szakok kezelése (`/admin/enrollments`) - *Csak ADMIN*
-*   `GET /admin/enrollments`: Összes szak listázása (egyetem névvel bővítve).
-*   `POST /admin/enrollments`: Új szak felvétele (szükséges a `university_id`).
-*   `PATCH /admin/enrollments/:id`: Szak adatainak módosítása.
-*   `DELETE /admin/enrollments/:id`: Szak törlése.
-
-### Tantárgyak / Fórumok kezelése (`/admin/forums`) - *ADMIN és LESSADMIN*
-*   `GET /admin/forums`: Összes tantárgy listázása (egyetem és szak névvel bővítve).
-*   `POST /admin/forums`: Új tantárgy hozzáadása (szükséges a `university_id` és `enrollment_id`).
-*   `PATCH /admin/forums/:id`: Tantárgy módosítása.
-*   `DELETE /admin/forums/:id`: Tantárgy törlése.
-
-### Szerepkörök és Jogosultságok
-*   **ADMIN:** Teljes hozzáférés mindenhez (Egyetemek, Szakok, Felhasználók, Fórumok, Posztok).
-*   **LESSADMIN (Mini-Admin):** Csak a tantárgyakat (fórumokat) tudja kezelni és a posztokat moderálni. Nem fér hozzá a szakokhoz és felhasználókhoz.
-*   **USER:** Publikus API-n keresztül tud bejelentkezni, fórumokat böngészni és saját posztokat létrehozni. Fórumot nem hozhat létre.
-
-### Felhasználók kezelése (`/admin/users`) - *Csak ADMIN*
-*   `GET /admin/users`: Regisztrált felhasználók listázása (egyetem/szak névvel).
-*   `POST /admin/users`: Új adminisztrátor vagy hallgató létrehozása.
-*   `DELETE /admin/users/:id`: Felhasználó törlése.
+### Moderációs funkciók
+Az adminisztrátorok a `/admin` prefixszel érhetik el a következőket:
+*   `GET /admin/posts`: Összes poszt listázása moderáláshoz.
+*   `DELETE /admin/posts/:id`: Bármely poszt törlése.
+*   `GET /admin/comments`: **ÚJ!** Összes hozzászólás listázása.
+*   `DELETE /admin/comments/:id`: **ÚJ!** Bármely hozzászólás törlése.
 
 ---
 

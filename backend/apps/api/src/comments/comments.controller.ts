@@ -20,4 +20,16 @@ export class CommentsController {
   ) {
     return this.commentsService.create(body.post_id, body.author_id, body.content);
   }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a comment' })
+  async update(@Param('id') id: string, @Body('content') content: string) {
+    return this.commentsService.update(id, content);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a comment' })
+  async delete(@Param('id') id: string) {
+    return this.commentsService.delete(id);
+  }
 }

@@ -26,4 +26,16 @@ export class CommentsService {
       )
       .orderBy('comments.created_at', 'asc');
   }
+
+  async update(id: string, content: string) {
+    const [updatedComment] = await this.knex('comments')
+      .where({ id })
+      .update({ content })
+      .returning('*');
+    return updatedComment;
+  }
+
+  async delete(id: string) {
+    return this.knex('comments').where({ id }).del();
+  }
 }

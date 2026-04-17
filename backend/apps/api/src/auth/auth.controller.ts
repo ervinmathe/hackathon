@@ -37,4 +37,11 @@ export class AuthController {
   async login(@Body() loginDto: any) {
     return this.authService.login(loginDto);
   }
+
+  @Post('profile/:id') // Using POST or PATCH, let's use PATCH for clarity or POST if frontend prefers
+  @ApiOperation({ summary: 'Update user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully.' })
+  async updateProfile(@Param('id') id: string, @Body() updateDto: any) {
+    return this.authService.updateProfile(id, updateDto);
+  }
 }

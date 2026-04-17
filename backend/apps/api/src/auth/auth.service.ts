@@ -63,4 +63,25 @@ export class AuthService {
       }
     };
   }
+
+  async updateProfile(id: string, data: any) {
+    const { username, email, password, enrollment_id, year } = data;
+    const updateData: any = {};
+
+    if (username) updateData.username = username;
+    if (email) updateData.email = email;
+    if (year) updateData.year = parseInt(year, 10);
+    if (enrollment_id) updateData.enrollment_id = enrollment_id;
+    
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    const [updatedUser] = await this.knex('users')
+      .where({ id })
+      .update(updateData)
+      .returning(['id', 'username', 'email', 'role', 'university_id', 'enrollment_id', 'year']);
+
+    return updatedUser;
+  }
 }

@@ -10,12 +10,14 @@ import { ForumsService } from './forums/forums.service';
 import { PostsController } from './posts/posts.controller';
 import { PostsService } from './posts/posts.service';
 import { CommentsModule } from './comments/comments.module';
+import { CalendarModule } from './calendar/calendar.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
     CommentsModule,
+    CalendarModule,
   ],
   controllers: [
     ApiController,

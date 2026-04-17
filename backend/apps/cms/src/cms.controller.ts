@@ -107,4 +107,16 @@ export class CmsController {
   async deletePost(@Param('id') id: string) {
     return this.cmsService.deletePost(id);
   }
+
+  @Get('comments')
+  @ApiOperation({ summary: 'Admin: List all comments for moderation' })
+  async getAllComments() {
+    return this.cmsService.getAllComments();
+  }
+
+  @Delete('comments/:id')
+  @ApiOperation({ summary: 'Admin: Delete a comment' })
+  async deleteComment(@Param('id') id: string) {
+    return this.cmsService.deleteComment(id);
+  }
 }

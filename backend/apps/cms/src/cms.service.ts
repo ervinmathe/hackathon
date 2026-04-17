@@ -124,4 +124,19 @@ export class CmsService {
     if (deletedCount === 0) throw new NotFoundException('Post not found');
     return { success: true };
   }
+
+  // --- Comments Moderation ---
+  async getAllComments() {
+    return this.knex('comments')
+      .join('users', 'comments.author_id', 'users.id')
+      .join('posts', 'comments.post_id', 'posts.id')
+      .select('comments.*', 'users.username as author_name', 'posts.title as post_title')
+      .orderBy('comments.created_at', 'desc');
+  }
+
+  async deleteComment(id: string) {
+    const deletedCount = await this.knex('comments').where({ id }).del();
+    if (deletedCount === 0) throw new NotFoundException('Comment not found');
+    return { success: true };
+  }
 }
