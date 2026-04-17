@@ -20,11 +20,17 @@ const switchTab = (tab) => {
   activeTab.value = tab
 }
 
-const slideOffset = computed(() => activeTab.value === 'login' ? '0%' : '-50%')
 
 const handleLogin = () => {
   router.replace('/home')
 }
+
+const slideOffset = computed(() => {
+  return activeTab.value === 'login' 
+    ? '0%' 
+    : 'calc(-50% - 40px)' // Move half the width PLUS half the gap
+})
+
 </script>
 
 <template>
@@ -273,7 +279,6 @@ const handleLogin = () => {
   gap: 40px;
 }
 .panel {
-  border: 1px solid white;
   width: 50%;
   flex-shrink: 0;
   min-width: 0;
