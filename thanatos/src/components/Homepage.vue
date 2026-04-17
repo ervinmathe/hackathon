@@ -120,7 +120,7 @@ const scrollToSection = (id) => {
             </div>
           </div>
 
-          <div class="card card--physical" @click="router.push('/physical-health')">
+          <div class="card card--physical" @click="router.push('/physicalhealth')">
             <div class="card__glow"></div>
             <div class="card__top">
               <div class="card__icon-wrap">

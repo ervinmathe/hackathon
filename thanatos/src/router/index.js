@@ -4,6 +4,7 @@ import HomePage from '../components/Homepage.vue'
 import Profile from '../components/Profile.vue'
 import Learnmore from '../components/Learnmore.vue'
 import Mentalhealth from '../components/Mentalhealth.vue'
+import Physicalhealth from '../components/Physicalhealthpage.vue'
 
 
 const router = createRouter({
@@ -14,21 +15,22 @@ const router = createRouter({
     {path: '/profile', component: Profile, meta: {title: 'Profile', requiresAuth: true}},
     {path: '/learnmore', component: Learnmore, meta: {title: 'Learn More', requiresAuth: true}},
     {path: '/mentalhealth', component: Mentalhealth, meta: {title: 'Mental Health', requiresAuth: true}},
+    {path: '/physicalhealth', component: Physicalhealth, meta: {title: 'Physical Health', requiresAuth: true}}
   ],
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, from) => {
   document.title = to.meta.title || "Invalid"
 
   const isAuthenticated = //localStorage.getItem('isAuthenticated') === 'true'
   /*kivenni majd ezt*/true
 
   if (to.meta.requiresAuth && !isAuthenticated) {
-    next({ path: '/' })
+    return '/login';
   } else if (to.path === '/' && isAuthenticated) {
-    next({ path: '/home' })
+    return '/home'
   } else {
-    next()
+    return true;
   }
 })
 
