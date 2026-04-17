@@ -1,5 +1,5 @@
 <script setup>
-import { allow } from '../router'
+import router , { allow } from '../router'
 
 function login() {
   allow.value = true
