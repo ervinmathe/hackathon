@@ -22,6 +22,7 @@ export class CmsGuiController {
     const forums = await this.cmsService.getAllForums();
     const users = await this.cmsService.getAllUsers();
     const posts = await this.cmsService.getAllPosts();
+    const comments = await this.cmsService.getAllComments();
 
     return res.render('dashboard', {
       universities,
@@ -29,6 +30,7 @@ export class CmsGuiController {
       forums,
       users,
       posts,
+      comments,
       userRole: session.userRole,
     });
   }

@@ -6,9 +6,14 @@
     <title>Hackathon Admin Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
     <style>
-        .section { margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        .section { margin-bottom: 3rem; border-bottom: 2px solid #eee; padding-bottom: 2rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem; align-items: start; }
         .badge { font-size: 0.8rem; padding: 0.2rem 0.5rem; border-radius: 5px; background: #eee; }
+        table { font-size: 0.9rem; }
+        button.outline { padding: 0.25rem 0.75rem; font-size: 0.8rem; width: auto; margin-bottom: 0; }
+        form { background: #f9f9f9; padding: 1.5rem; border-radius: 8px; }
+        form h3 { margin-top: 0; }
+        input, select, textarea { margin-bottom: 1rem !important; }
     </style>
 </head>
 <body>
@@ -46,8 +51,8 @@
                     </table>
                 </div>
                 <div>
-                    <h3>Új egyetem hozzáadása</h3>
                     <form onsubmit="handleCreate(event, 'universities')">
+                        <h3>Új egyetem</h3>
                         <input type="text" name="name" placeholder="Egyetem neve" required>
                         <textarea name="description" placeholder="Leírás"></textarea>
                         <button type="submit">Hozzáadás</button>
@@ -81,8 +86,8 @@
                     </table>
                 </div>
                 <div>
-                    <h3>Új szak hozzáadása</h3>
                     <form onsubmit="handleCreate(event, 'enrollments')">
+                        <h3>Új szak</h3>
                         <input type="text" name="name" placeholder="Szak neve" required>
                         <select name="university_id" required>
                             <option value="" disabled selected>Válassz egyetemet...</option>
@@ -125,8 +130,8 @@
                     </table>
                 </div>
                 <div>
-                    <h3>Új tantárgy hozzáadása</h3>
                     <form onsubmit="handleCreate(event, 'forums')">
+                        <h3>Új tantárgy</h3>
                         <input type="text" name="name" placeholder="Tantárgy neve" required>
                         <select name="university_id" required>
                             <option value="" disabled selected>Válassz egyetemet...</option>
@@ -175,8 +180,8 @@
                     </table>
                 </div>
                 <div>
-                    <h3>Új Admin/LessAdmin létrehozása</h3>
                     <form onsubmit="handleCreate(event, 'users')">
+                        <h3>Új Admin/LessAdmin</h3>
                         <input type="text" name="username" placeholder="Felhasználónév" required>
                         <input type="email" name="email" placeholder="Email" required>
                         <input type="password" name="password" placeholder="Jelszó" required>
@@ -200,27 +205,58 @@
 
         <!-- POSZTOK (Moderáció - ADMIN és LESSADMIN is) -->
         <section class="section">
-            <h3>Összes Poszt / Jegyzet (Moderáció)</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Cím</th>
-                        <th>Tantárgy</th>
-                        <th>Szerző</th>
-                        <th>Művelet</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% posts.forEach(p => { %>
+            <h3>Posztok / Jegyzetek (Moderáció)</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
                         <tr>
-                            <td><%= p.title %></td>
-                            <td><%= p.forum_name %></td>
-                            <td><%= p.author_name %></td>
-                            <td><button class="outline contrast" onclick="deleteItem('posts', '<%= p.id %>')">Törlés</button></td>
+                            <th>Cím</th>
+                            <th>Tantárgy</th>
+                            <th>Szerző</th>
+                            <th>Művelet</th>
                         </tr>
-                    <% }) %>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <% posts.forEach(p => { %>
+                            <tr>
+                                <td><%= p.title %></td>
+                                <td><%= p.forum_name %></td>
+                                <td><%= p.author_name %></td>
+                                <td><button class="outline contrast" onclick="deleteItem('posts', '<%= p.id %>')">Törlés</button></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- HOZZÁSZÓLÁSOK (Moderáció - ADMIN és LESSADMIN is) -->
+        <section class="section">
+            <h3>Hozzászólások (Moderáció)</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tartalom</th>
+                            <th>Poszt</th>
+                            <th>Szerző</th>
+                            <th>Művelet</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% (typeof comments !== 'undefined' ? comments : []).forEach(c => { %>
+                            <tr>
+                                <td style="max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    <%= c.content %>
+                                </td>
+                                <td><%= c.post_title %></td>
+                                <td><%= c.author_name %></td>
+                                <td><button class="outline contrast" onclick="deleteItem('comments', '<%= c.id %>')">Törlés</button></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
         </section>
 
     </main>
