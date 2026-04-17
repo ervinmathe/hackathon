@@ -73,12 +73,8 @@ const placeQueries = {
 
 const events = ref([])
 
-const filteredActivities = computed(() => {
-    if (selectedCategory.value === 'All') return places.value
-    return places.value.filter(act =>
-        act.type.toLowerCase().includes(selectedCategory.value.toLowerCase())
-    )
-})
+const filteredActivities = computed(() => places.value
+)
 
 const performGoogleSearch = async () => {
     if (!userCoords.value) return
@@ -239,7 +235,9 @@ function openOnMaps(act) {
 
 function setcategoryAndQuerry(cat) {
     selectedCategory.value = cat
-    searchQuery.value = cat === 'All' ? 'gyms and parks' : placeQueries[cat].join(' ')
+    searchQuery.value = cat === 'All' 
+        ? 'gyms and parks' 
+        : placeQueries[cat].join(',')
     performGoogleSearch()
 }
 </script>
