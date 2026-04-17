@@ -2,6 +2,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import router from './router';
 
+
+
 </script>
 
 <template>
