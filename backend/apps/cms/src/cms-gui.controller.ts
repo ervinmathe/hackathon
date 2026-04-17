@@ -23,6 +23,7 @@ export class CmsGuiController {
     const users = await this.cmsService.getAllUsers();
     const posts = await this.cmsService.getAllPosts();
     const comments = await this.cmsService.getAllComments();
+    const events = await this.cmsService.getAllEvents();
 
     return res.render('dashboard', {
       universities,
@@ -31,6 +32,7 @@ export class CmsGuiController {
       users,
       posts,
       comments,
+      events,
       userRole: session.userRole,
     });
   }

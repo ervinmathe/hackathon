@@ -81,4 +81,15 @@ export class PostsService {
   async removeAttachment(attachmentId: string) {
     return this.knex('post_attachments').where({ id: attachmentId }).del();
   }
+
+  async togglePin(id: string) {
+    const post = await this.knex('posts').where({ id }).first();
+    if (!post) return null;
+
+    const [updatedPost] = await this.knex('posts')
+      .where({ id })
+      .update({ is_pinned: !post.is_pinned })
+      .returning('*');
+    return updatedPost;
+  }
 }

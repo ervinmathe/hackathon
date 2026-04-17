@@ -139,4 +139,13 @@ export class CmsService {
     if (deletedCount === 0) throw new NotFoundException('Comment not found');
     return { success: true };
   }
+
+  // --- Calendar Management ---
+  async getAllEvents() {
+    return this.knex('calendar_events')
+      .join('users', 'calendar_events.created_by', 'users.id')
+      .leftJoin('universities', 'calendar_events.university_id', 'universities.id')
+      .select('calendar_events.*', 'users.username as author_name', 'universities.name as university_name')
+      .orderBy('calendar_events.start_time', 'asc');
+  }
 }

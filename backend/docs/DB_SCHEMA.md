@@ -86,7 +86,15 @@ A posztok alatt folyó interakciók.
 | `content` | Text | A hozzászólás szövege |
 | `created_at` | Timestamp | Létrehozás ideje |
 
-## 8. `calendar_events` (Naptár Események)
+## 8. `user_forums` (Fórum tagságok) - *ÚJ*
+A diákok által bekövetett fórumok kapcsolótáblája.
+| Mező | Típus | Leírás |
+| :--- | :--- | :--- |
+| `user_id` | UUID (FK) | A felhasználó azonosítója |
+| `forum_id` | UUID (FK) | A fórum azonosítója |
+| `joined_at` | Timestamp | A csatlakozás időpontja |
+
+## 9. `calendar_events` (Naptár Események)
 ZH-k, konzultációk vagy közös tanulások.
 | Mező | Típus | Leírás |
 | :--- | :--- | :--- |

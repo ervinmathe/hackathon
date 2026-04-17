@@ -56,4 +56,10 @@ export class PostsController {
   async removeAttachment(@Param('attachmentId') attachmentId: string) {
     return this.postsService.removeAttachment(attachmentId);
   }
+
+  @Patch(':id/pin')
+  @ApiOperation({ summary: 'Toggle pinned status of a post' })
+  async togglePin(@Param('id') id: string) {
+    return this.postsService.togglePin(id);
+  }
 }

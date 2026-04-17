@@ -20,13 +20,17 @@ Ez a dokumentáció tartalmazza a `thanatos` Vue frontend számára készült pu
 
 ### Fórumok és Tantárgyak (`/forums`)
 *   `GET /forums`: Lekéri a tantárgyakat (fórumokat). Szűrhető és kereshető (`?search=...`).
-*   `GET /forums/:id/posts`: Lekéri az adott tantárgyhoz tartozó összes posztot (rövidített lista).
+*   `GET /forums/my/:userId`: **ÚJ!** A diák által bekövetett/csatlakozott fórumok listája.
+*   `POST /forums/:id/join`: **ÚJ!** Csatlakozás egy fórumhoz. Body: `{ "userId": "UUID" }`.
+*   `DELETE /forums/:id/leave?userId=UUID`: **ÚJ!** Kilépés egy fórumból.
+*   `GET /forums/:id/posts`: Lekéri az adott tantárgyhoz tartozó összes posztot.
 
 ### Posztok és Jegyzetek (`/posts`)
 *   `GET /posts/:id`: **ÚJ!** Egy konkrét poszt részletes megtekintése (tartalom, csatolmányok és az összes hozzászólás egyben).
 *   `POST /posts`: Új bejegyzés létrehozása (Multipart/form-data).
 *   `PATCH /posts/:id`: **ÚJ!** Saját poszt szerkesztése.
 *   `DELETE /posts/:id`: **ÚJ!** Saját poszt törlése.
+*   `PATCH /posts/:id/pin`: **ÚJ!** Poszt rögzítése/pinelése a fórum tetejére.
 *   `DELETE /posts/attachments/:attachmentId`: **ÚJ!** Egy konkrét melléklet törlése a posztból.
 
 ### Hozzászólások (`/comments`)

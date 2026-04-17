@@ -28,10 +28,38 @@ export class ForumsService {
     return query;
   }
 
+  async findMyForums(userId: string) {
+    return this.knex('forums')
+      .join('user_forums', 'forums.id', 'user_forums.forum_id')
+      .where('user_forums.user_id', userId)
+      .select('forums.*');
+  }
+
+  async join(userId: string, forumId: string) {
+    // Check if already joined
+    const existing = await this.knex('user_forums')
+      .where({ user_id: userId, forum_id: forumId })
+      .first();
+    
+    if (existing) return existing;
+
+    const [joined] = await this.knex('user_forums')
+      .insert({ user_id: userId, forum_id: forumId })
+      .returning('*');
+    return joined;
+  }
+
+  async leave(userId: string, forumId: string) {
+    return this.knex('user_forums')
+      .where({ user_id: userId, forum_id: forumId })
+      .del();
+  }
+
   async findPostsByForum(forumId: string) {
     const posts = await this.knex('posts')
       .where({ forum_id: forumId })
       .select('*')
+      .orderBy('is_pinned', 'desc')
       .orderBy('created_at', 'desc');
 
     // Attachments for each post
