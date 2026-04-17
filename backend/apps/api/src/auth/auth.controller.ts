@@ -38,6 +38,13 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Post('logout')
+  @ApiOperation({ summary: 'User logout' })
+  @ApiResponse({ status: 200, description: 'User successfully logged out.' })
+  async logout() {
+    return { message: 'Logged out' };
+  }
+
   @Post('profile/:id') // Using POST or PATCH, let's use PATCH for clarity or POST if frontend prefers
   @ApiOperation({ summary: 'Update user profile' })
   @ApiResponse({ status: 200, description: 'Profile updated successfully.' })

@@ -43,9 +43,19 @@ export class AuthService {
   }
 
   async login(data: any) {
-    const { username, password } = data;
+    const { email, username, password } = data;
     
-    const user = await this.knex('users').where({ username }).first();
+    // Support both 'email' and 'username' keys from frontend
+    const identifier = email || username;
+
+    if (!identifier) {
+      throw new UnauthorizedException('Username or Email is required');
+    }
+
+    const user = await this.knex('users')
+      .where({ email: identifier })
+      .orWhere({ username: identifier })
+      .first();
     
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new UnauthorizedException('Invalid credentials');

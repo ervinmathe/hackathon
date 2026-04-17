@@ -2,10 +2,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader'
-const { Place } = await google.maps.importLibrary("places")
+import { useAuthStore } from '../stores/auth'
 
 // 1. Initialize variables
 const router = useRouter()
+const authStore = useAuthStore()
 const activeTab = ref('discover')
 const searchQuery = ref('')
 const selectedCategory = ref('All')
@@ -119,7 +120,7 @@ const events = ref([
     <div class="page">
         <!-- NAVBAR -->
         <nav class="navbar">
-            <button class="back-btn" @click="getloginvalidation()">
+            <button class="back-btn" @click="router.replace('/home')">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="15 18 9 12 15 6" />
                 </svg>
@@ -135,7 +136,7 @@ const events = ref([
                 <div v-if="userCoords" class="loc-badge">
                     <span class="pulse-dot"></span> 20km Active
                 </div>
-                <div class="avatar"><span>U</span></div>
+                <div class="avatar"><span>{{ authStore.user?.username?.charAt(0).toUpperCase() || 'U' }}</span></div>
             </div>
         </nav>
 

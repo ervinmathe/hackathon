@@ -9,7 +9,14 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(ApiModule);
 
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // Allow local development and the cloudflare tunnel
+      if (!origin || origin.includes('localhost') || origin.includes('trycloudflare.com')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   });
 
