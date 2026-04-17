@@ -264,13 +264,16 @@ const handleLogin = () => {
   padding: 28px 28px 24px;
 }
 .slider-track {
+  padding: auto;
   display: flex;
   width: 200%;
   will-change: transform;
   align-items: flex-start;
   transition: transform 0.38s cubic-bezier(0.4,0,0.2,1);
+  gap: 40px;
 }
 .panel {
+  border: 1px solid white;
   width: 50%;
   flex-shrink: 0;
   min-width: 0;
