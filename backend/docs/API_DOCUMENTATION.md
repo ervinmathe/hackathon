@@ -46,8 +46,14 @@ A `http://localhost:3001/login` oldalon belépve egy grafikus felületen tudod:
 *   `PATCH /admin/forums/:id`: Tantárgy módosítása.
 *   `DELETE /admin/forums/:id`: Tantárgy törlése.
 
+### Szerepkörök és Jogosultságok
+*   **ADMIN:** Teljes hozzáférés mindenhez (Szakok, Felhasználók, Fórumok, Posztok).
+*   **LESSADMIN (Mini-Admin):** Csak a tantárgyakat (fórumokat) tudja kezelni és a posztokat moderálni. Nem látja a szakokat és a felhasználókat a CMS-ben.
+*   **USER:** Csak olvasási jog a fórumokhoz, saját posztok létrehozása.
+
 ### Felhasználók kezelése (`/admin/users`)
 *   `GET /admin/users`: Regisztrált felhasználók listázása (jelszó nélkül).
+*   `POST /admin/users`: Új adminisztrátor vagy hallgató létrehozása.
 *   `DELETE /admin/users/:id`: Felhasználó törlése.
 
 ### Tartalom moderáció (`/admin/posts`)

@@ -1,5 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { Knex } from 'knex';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class CmsService {
@@ -60,6 +61,17 @@ export class CmsService {
   }
 
   // --- Users Management ---
+  async createUser(data: { username: string; email: string; password: string; role: string; enrollment_id?: string; year?: number }) {
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const [user] = await this.knex('users')
+      .insert({
+        ...data,
+        password: hashedPassword,
+      })
+      .returning(['id', 'username', 'email', 'role']);
+    return user;
+  }
+
   async getAllUsers() {
     return this.knex('users').select('id', 'username', 'email', 'role', 'enrollment_id', 'year', 'created_at');
   }

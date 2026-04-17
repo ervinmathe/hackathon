@@ -13,7 +13,7 @@ export class CmsGuiController {
 
   @Get('dashboard')
   async dashboard(@Session() session: any, @Res() res: express.Response) {
-    if (!session || !session.isAdmin) {
+    if (!session || !session.userRole) {
       return res.redirect('/login');
     }
 
@@ -27,6 +27,7 @@ export class CmsGuiController {
       forums,
       users,
       posts,
+      userRole: session.userRole,
     });
   }
 }

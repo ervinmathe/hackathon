@@ -8,12 +8,13 @@
     <style>
         .section { margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        .badge { font-size: 0.8rem; padding: 0.2rem 0.5rem; border-radius: 5px; background: #eee; }
     </style>
 </head>
 <body>
     <nav class="container-fluid">
         <ul>
-            <li><strong>Hackathon CMS Admin</strong></li>
+            <li><strong>Hackathon CMS Admin</strong> <span class="badge"><%= userRole %></span></li>
         </ul>
         <ul>
             <li><a href="/logout" class="secondary">Kijelentkezés</a></li>
@@ -21,7 +22,8 @@
     </nav>
     <main class="container">
         
-        <!-- SZAKOK (ENROLLMENTS) -->
+        <!-- SZAKOK (Csak ADMIN) -->
+        <% if (userRole === 'ADMIN') { %>
         <section class="section">
             <div class="grid">
                 <div>
@@ -53,8 +55,9 @@
                 </div>
             </div>
         </section>
+        <% } %>
 
-        <!-- TANTÁRGYAK (FORUMS) -->
+        <!-- TANTÁRGYAK (ADMIN és LESSADMIN is) -->
         <section class="section">
             <div class="grid">
                 <div>
@@ -97,45 +100,58 @@
             </div>
         </section>
 
-        <!-- FELHASZNÁLÓK -->
+        <!-- FELHASZNÁLÓK (Csak ADMIN) -->
+        <% if (userRole === 'ADMIN') { %>
         <section class="section">
-            <h3>Felhasználók</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Felhasználónév</th>
-                        <th>Email</th>
-                        <th>Szak</th>
-                        <th>Év</th>
-                        <th>Művelet</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% users.forEach(u => { 
-                        const enrollment = enrollments.find(e => e.id === u.enrollment_id);
-                    %>
-                        <tr>
-                            <td><%= u.username %></td>
-                            <td><%= u.email %></td>
-                            <td><%= enrollment ? enrollment.name : '-' %></td>
-                            <td><%= u.year || '-' %></td>
-                            <td><button class="outline contrast" onclick="deleteItem('users', '<%= u.id %>')">Törlés</button></td>
-                        </tr>
-                    <% }) %>
-                </tbody>
-            </table>
+            <div class="grid">
+                <div>
+                    <h3>Felhasználók</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Név</th>
+                                <th>Szerepkör</th>
+                                <th>Művelet</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% users.forEach(u => { %>
+                                <tr>
+                                    <td><%= u.username %> (<%= u.email %>)</td>
+                                    <td><span class="badge"><%= u.role %></span></td>
+                                    <td><button class="outline contrast" onclick="deleteItem('users', '<%= u.id %>')">Törlés</button></td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <div>
+                    <h3>Új Admin/LessAdmin létrehozása</h3>
+                    <form onsubmit="handleCreate(event, 'users')">
+                        <input type="text" name="username" placeholder="Felhasználónév" required>
+                        <input type="email" name="email" placeholder="Email" required>
+                        <input type="password" name="password" placeholder="Jelszó" required>
+                        <select name="role" required>
+                            <option value="LESSADMIN">LESSADMIN (Fórum kezelő)</option>
+                            <option value="ADMIN">ADMIN (Teljes jogú)</option>
+                            <option value="USER">USER (Hallgató)</option>
+                        </select>
+                        <button type="submit">Létrehozás</button>
+                    </form>
+                </div>
+            </div>
         </section>
+        <% } %>
 
-        <!-- POSZTOK -->
+        <!-- POSZTOK (Moderáció - ADMIN és LESSADMIN is) -->
         <section class="section">
-            <h3>Összes Poszt / Jegyzet</h3>
+            <h3>Összes Poszt / Jegyzet (Moderáció)</h3>
             <table>
                 <thead>
                     <tr>
                         <th>Cím</th>
                         <th>Tantárgy</th>
                         <th>Szerző</th>
-                        <th>Dátum</th>
                         <th>Művelet</th>
                     </tr>
                 </thead>
@@ -145,7 +161,6 @@
                             <td><%= p.title %></td>
                             <td><%= p.forum_name %></td>
                             <td><%= p.author_name %></td>
-                            <td><%= new Date(p.created_at).toLocaleDateString() %></td>
                             <td><button class="outline contrast" onclick="deleteItem('posts', '<%= p.id %>')">Törlés</button></td>
                         </tr>
                     <% }) %>

@@ -64,6 +64,12 @@ export class CmsController {
     return this.cmsService.getAllUsers();
   }
 
+  @Post('users')
+  @ApiOperation({ summary: 'Admin: Create a new user (e.g. LESSADMIN)' })
+  async createUser(@Body() data: { username: string; email: string; password: string; role: string; enrollment_id?: string; year?: number }) {
+    return this.cmsService.createUser(data);
+  }
+
   @Delete('users/:id')
   @ApiOperation({ summary: 'Admin: Delete a user' })
   async deleteUser(@Param('id') id: string) {
