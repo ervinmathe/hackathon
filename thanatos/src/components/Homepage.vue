@@ -108,7 +108,7 @@ function logout() {
         <h2 class="section-title">Where do you want to begin?</h2>
 
         <div class="cards">
-          <div class="card card--mental" @click="router.push('/mentalhealth')">
+          <div class="card card--mental" @click="router.push('/mental-health')">
             <div class="card__glow"></div>
             <div class="card__top">
               <div class="card__icon-wrap">
@@ -127,7 +127,7 @@ function logout() {
             </div>
           </div>
 
-          <div class="card card--physical" @click="router.push('/physicalhealth')">
+          <div class="card card--physical" @click="router.push('/physical-health')">
             <div class="card__glow"></div>
             <div class="card__top">
               <div class="card__icon-wrap">
