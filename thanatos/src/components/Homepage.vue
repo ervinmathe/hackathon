@@ -23,6 +23,14 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
 const closeDropdown = (e) => {
   if (!e.target.closest('.profile-container')) showDropdown.value = false
 }
+
+const scrollToSection = (id) => {
+    const element = document.getElementById(id);
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+    }
+};
+
 </script>
 
 <template>
@@ -73,11 +81,11 @@ const closeDropdown = (e) => {
           <em class="hero__title-em">your health</em>
         </h1>
         <p class="hero__sub">
-          A unified space to track your mind and body — built around how you actually live.
+          A unified space for students to develop their body mind and body.
         </p>
         <div class="hero__ctas">
-          <a class="btn btn--primary" href="select-section">Get Started</a>
-          <button class="btn btn--ghost">Learn more</button>
+          <button class="btn btn--primary" @click="scrollToSection('select-section')">Get Started</button>
+          <button class="btn btn--ghost" @click="router.push('/learnmore')">Learn more</button>
         </div>
       </div>
 
@@ -87,15 +95,13 @@ const closeDropdown = (e) => {
       </div>
     </section>
 
-    <!-- SELECT SECTION -->
     <section id="select-section">
       <div :class="['select-section__inner', { 'select-section__inner--visible': cardsVisible }]">
         <div class="section-label">Choose your focus</div>
         <h2 class="section-title">Where do you want to begin?</h2>
 
         <div class="cards">
-          <!-- Mental Health Card -->
-          <div class="card card--mental" @click="router.push('/mental-health')">
+          <div class="card card--mental" @click="router.push('/mentalhealth')">
             <div class="card__glow"></div>
             <div class="card__top">
               <div class="card__icon-wrap">
@@ -106,15 +112,14 @@ const closeDropdown = (e) => {
               </div>
             </div>
             <h3 class="card__title">Mental Health</h3>
-            <p class="card__desc">Manage stress, build resilience, and find clarity through guided practices and insights.</p>
+            <p class="card__desc">Helping students balance studying, mental well-being, and social life through community and events.</p>
             <div class="card__tags">
-              <span class="tag">Mindfulness</span>
-              <span class="tag">Stress Relief</span>
+              <span class="tag">Responses</span>
+              <span class="tag">Social activity</span>
               <span class="tag">Focus</span>
             </div>
           </div>
 
-          <!-- Physical Health Card -->
           <div class="card card--physical" @click="router.push('/physical-health')">
             <div class="card__glow"></div>
             <div class="card__top">
@@ -126,10 +131,9 @@ const closeDropdown = (e) => {
               </div>
             </div>
             <h3 class="card__title">Physical Health</h3>
-            <p class="card__desc">Track activity, build strength, and nurture your body with personalized fitness guidance.</p>
+            <p class="card__desc">A platform for students to feel better through movement, fitness, and active community events.</p>
             <div class="card__tags">
               <span class="tag">Fitness</span>
-              <span class="tag">Nutrition</span>
               <span class="tag">Recovery</span>
             </div>
           </div>
@@ -137,7 +141,6 @@ const closeDropdown = (e) => {
       </div>
     </section>
 
-    <!-- FOOTER -->
     <footer class="footer">
       <div class="footer__inner">
         <div class="footer__brand">

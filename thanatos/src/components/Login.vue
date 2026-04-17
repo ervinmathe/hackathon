@@ -1,10 +1,8 @@
 <script setup>
-import router , { allow } from '../router'
+import router  from '../router'
 
 function login() {
-  allow.value = true
   router.replace('/home')
-  aloow.value = false
 }
 </script>
 
