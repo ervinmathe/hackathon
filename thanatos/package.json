@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "vitest",
+    "test:cov": "vitest run --coverage",
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
@@ -22,17 +24,21 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@vitejs/plugin-vue": "^6.0.5",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "@vitest/coverage-v8": "^4.1.4",
+    "@vue/test-utils": "^2.4.6",
     "eslint": "^10.1.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-oxlint": "~1.57.0",
     "eslint-plugin-vue": "~10.8.0",
     "globals": "^17.4.0",
+    "jsdom": "^29.0.2",
     "npm-run-all2": "^8.0.4",
     "oxlint": "~1.57.0",
     "prettier": "3.8.1",
     "vite": "^8.0.3",
-    "vite-plugin-vue-devtools": "^8.1.1"
+    "vite-plugin-vue-devtools": "^8.1.1",
+    "vitest": "^4.1.4"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

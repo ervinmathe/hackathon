@@ -10,7 +10,12 @@ export default defineConfig({
     vue(),
     vueDevTools(),
   ],
-  server: {
+  test: {
+    environment: 'jsdom',
+    globals: true
+  },
+  resolve: {
+
     allowedHosts: ['sisters-protective-spend-mitchell.trycloudflare.com'],
     proxy: {
       '/auth': 'http://localhost:3000',

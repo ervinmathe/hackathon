@@ -37,7 +37,7 @@ export class AuthService {
         enrollment_id,
         year: parseInt(year, 10),
       })
-      .returning(['id', 'username', 'email', 'role', 'university_id', 'enrollment_id']);
+      .returning(['id', 'username', 'email', 'role', 'university_id', 'enrollment_id', 'profile_url']);
 
     return user;
   }
@@ -69,19 +69,21 @@ export class AuthService {
         username: user.username,
         role: user.role,
         university_id: user.university_id,
-        enrollment_id: user.enrollment_id
+        enrollment_id: user.enrollment_id,
+        profile_url: user.profile_url
       }
     };
   }
 
   async updateProfile(id: string, data: any) {
-    const { username, email, password, enrollment_id, year } = data;
+    const { username, email, password, enrollment_id, year, profile_url } = data;
     const updateData: any = {};
 
     if (username) updateData.username = username;
     if (email) updateData.email = email;
     if (year) updateData.year = parseInt(year, 10);
     if (enrollment_id) updateData.enrollment_id = enrollment_id;
+    if (profile_url) updateData.profile_url = profile_url;
     
     if (password) {
       updateData.password = await bcrypt.hash(password, 10);
@@ -90,7 +92,7 @@ export class AuthService {
     const [updatedUser] = await this.knex('users')
       .where({ id })
       .update(updateData)
-      .returning(['id', 'username', 'email', 'role', 'university_id', 'enrollment_id', 'year']);
+      .returning(['id', 'username', 'email', 'role', 'university_id', 'enrollment_id', 'year', 'profile_url']);
 
     return updatedUser;
   }
