@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import Login from '../components/Login.vue'
 import HomePage from '../components/Homepage.vue' 
 import Profile from '../components/Profile.vue'
@@ -20,21 +21,17 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from) => {
+  const authStore = useAuthStore()
   document.title = to.meta.title || "Invalid"
 
-  const isAuthenticated = //localStorage.getItem('isAuthenticated') === 'true'
-  true
-  // 1. If NOT logged in, only redirect if they aren't already going to the Login page
-  if (!isAuthenticated && to.path !== '/') {
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return '/'
   }
 
-  // 2. If LOGGED in, only redirect to home if they are trying to access the Login page
-  if (isAuthenticated && to.path === '/') {
+  if (authStore.isAuthenticated && to.path === '/') {
     return '/home'
   }
 
-  // 3. Otherwise, return nothing (or true) to let the navigation happen normally
   return true
 })
 

@@ -1,10 +1,14 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const activeTab = ref('login')
 const sliding = ref(false)
+const error = ref('')
+const loading = ref(false)
 
 // Login fields
 const loginEmail = ref('')
@@ -18,11 +22,52 @@ const regConfirm = ref('')
 
 const switchTab = (tab) => {
   activeTab.value = tab
+  error.value = ''
 }
 
+const handleLogin = async () => {
+  if (!loginEmail.value || !loginPassword.value) {
+    error.value = 'Please fill in all fields'
+    return
+  }
+  
+  loading.value = true
+  error.value = ''
+  try {
+    await authStore.login(loginEmail.value, loginPassword.value)
+    router.replace('/home')
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Login failed. Please check your credentials.'
+  } finally {
+    loading.value = false
+  }
+}
 
-const handleLogin = () => {
-  router.replace('/home')
+const handleRegister = async () => {
+  if (!regName.value || !regEmail.value || !regPassword.value || !regConfirm.value) {
+    error.value = 'Please fill in all fields'
+    return
+  }
+  
+  if (regPassword.value !== regConfirm.value) {
+    error.value = 'Passwords do not match'
+    return
+  }
+  
+  loading.value = true
+  error.value = ''
+  try {
+    await authStore.register({
+      username: regName.value, // Mapping 'Full Name' to 'username' for backend
+      email: regEmail.value,
+      password: regPassword.value
+    })
+    router.replace('/home')
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Registration failed.'
+  } finally {
+    loading.value = false
+  }
 }
 
 const slideOffset = computed(() => {
@@ -71,6 +116,12 @@ const slideOffset = computed(() => {
                 <h2 class="panel__title">Welcome back</h2>
                 <p class="panel__sub">Sign in to continue your wellness journey</p>
               </div>
+
+              <!-- Error Message -->
+              <div v-if="error" class="error-msg">
+                {{ error }}
+              </div>
+
               <div class="fields">
                 <div class="field">
                   <label class="field__label">Email</label>
@@ -93,9 +144,12 @@ const slideOffset = computed(() => {
                   <a href="#" class="forgot">Forgot password?</a>
                 </div>
               </div>
-              <button class="submit-btn" @click="handleLogin">
-                Sign In
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <button class="submit-btn" :disabled="loading" @click="handleLogin">
+                <span v-if="loading">Signing in...</span>
+                <template v-else>
+                  Sign In
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </template>
               </button>
               <p class="switch-hint">Don't have an account? <span @click="switchTab('register')">Register</span></p>
             </div>
@@ -106,6 +160,12 @@ const slideOffset = computed(() => {
                 <h2 class="panel__title">Create account</h2>
                 <p class="panel__sub">Join Wellpath and start your journey today</p>
               </div>
+
+              <!-- Error Message -->
+              <div v-if="error" class="error-msg">
+                {{ error }}
+              </div>
+
               <div class="fields">
                 <div class="field">
                   <label class="field__label">Full Name</label>
@@ -136,9 +196,12 @@ const slideOffset = computed(() => {
                   </div>
                 </div>
               </div>
-              <button class="submit-btn" @click="handleLogin">
-                Create Account
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <button class="submit-btn" :disabled="loading" @click="handleRegister">
+                <span v-if="loading">Processing...</span>
+                <template v-else>
+                  Create Account
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </template>
               </button>
               <p class="switch-hint">Already have an account? <span @click="switchTab('login')">Sign in</span></p>
             </div>
@@ -367,6 +430,21 @@ const slideOffset = computed(() => {
   box-shadow: 0 8px 40px rgba(94,231,176,0.3);
 }
 .submit-btn:active { transform: scale(0.97); }
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.error-msg {
+  background: rgba(255, 75, 75, 0.1);
+  border: 1px solid rgba(255, 75, 75, 0.2);
+  color: #ff8080;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  text-align: center;
+}
 
 .switch-hint {
   text-align: center;

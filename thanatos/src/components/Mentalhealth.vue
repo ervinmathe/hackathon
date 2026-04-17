@@ -1,54 +1,103 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '../api/api'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const activeTab = ref('forums')
 const searchQuery = ref('')
 const showSearch = ref(false)
 
-const allChannels = ref([
-  { id: 1, name: 'Anxiety Support', desc: 'A safe space to share anxiety experiences', members: 4821, joined: true,  icon: '🌿', color: '#5ee7b0' },
-  { id: 2, name: 'Daily Mindfulness', desc: 'Morning check-ins and meditation logs', members: 3102, joined: true,  icon: '🧘', color: '#3b9eff' },
-  { id: 3, name: 'Depression Diaries', desc: 'Honest conversations, no judgment here', members: 6740, joined: false, icon: '🌙', color: '#a78bfa' },
-  { id: 4, name: 'Sleep & Rest', desc: 'Tips, routines and insomnia support', members: 2389, joined: true,  icon: '😴', color: '#f9a8d4' },
-  { id: 5, name: 'Grief & Loss', desc: 'Healing together through difficult times', members: 1890, joined: false, icon: '🕊️', color: '#fbbf24' },
-  { id: 6, name: 'Work Burnout', desc: 'Burnout recovery and boundaries at work', members: 5512, joined: false, icon: '🔥', color: '#f87171' },
-  { id: 7, name: 'Relationship Healing', desc: 'Navigating love, loss, and attachment', members: 3310, joined: false, icon: '💙', color: '#60a5fa' },
-  { id: 8, name: 'Positive Affirmations', desc: 'Daily boosts and encouragement', members: 7203, joined: true,  icon: '✨', color: '#5ee7b0' },
-  { id: 9, name: 'Trauma Recovery', desc: 'Shared paths through healing trauma', members: 2110, joined: false, icon: '🌱', color: '#34d399' },
-  { id: 10, name: 'ADHD Community', desc: 'Focus, routines and ADHD management', members: 4450, joined: false, icon: '⚡', color: '#fbbf24' },
-])
+const allChannels = ref([])
+const events = ref([])
+const myChannels = ref([])
+const activeChannel = ref(null)
+const posts = ref([])
 
-const events = ref([
-  { id: 1, title: 'Group Meditation Session', date: 'Apr 22, 2025', time: '7:00 PM', host: 'Dr. A. Veres', type: 'Live', attendees: 128, icon: '🧘' },
-  { id: 2, title: 'Burnout & Boundaries Webinar', date: 'Apr 25, 2025', time: '6:00 PM', host: 'Wellness Collective', type: 'Webinar', attendees: 302, icon: '💼' },
-  { id: 3, title: 'Grief Circle — Open Session', date: 'Apr 28, 2025', time: '5:30 PM', host: 'Community Hosts', type: 'Workshop', attendees: 44, icon: '🕊️' },
-  { id: 4, title: 'Sleep Hygiene Masterclass', date: 'May 2, 2025', time: '8:00 PM', host: 'Dr. K. Moran', type: 'Live', attendees: 210, icon: '😴' },
-  { id: 5, title: 'Mindful Journaling Hour', date: 'May 5, 2025', time: '9:00 AM', host: 'Daily Mindfulness', type: 'Workshop', attendees: 76, icon: '📝' },
-])
+const fetchMyChannels = async () => {
+  try {
+    const userId = authStore.user?.id
+    if (!userId) return
 
-const activeChannel = ref(allChannels.value.find(c => c.joined))
+    // 1. Fetch ALL available forums for discovery
+    const allRes = await api.get('/forums')
+    
+    // 2. Fetch specific forums for THIS user
+    const myRes = await api.get(`/forums/my?userId=${userId}`)
+    const myForumIds = myRes.data.map(f => f.id)
 
-const myChannels = computed(() => allChannels.value.filter(c => c.joined))
+    allChannels.value = allRes.data.map(ch => ({
+      ...ch,
+      icon: '🌿', // Placeholder icon
+      color: '#5ee7b0', // Placeholder color
+      joined: myForumIds.includes(ch.id)
+    }))
+  } catch (err) {
+    console.error('Failed to fetch forums', err)
+  }
+}
+
+const fetchEvents = async () => {
+  try {
+    const res = await api.get('/calendar')
+    events.value = res.data.map(e => ({
+      ...e,
+      icon: '📅'
+    }))
+  } catch (err) {
+    console.error('Failed to fetch events', err)
+  }
+}
+
+const fetchPosts = async (forumId) => {
+  try {
+    const res = await api.get(`/forums/${forumId}/posts`)
+    posts.value = res.data
+  } catch (err) {
+    console.error('Failed to fetch posts', err)
+  }
+}
+
+onMounted(() => {
+  fetchMyChannels()
+  fetchEvents()
+})
+
+const selectChannel = (channel) => {
+  activeChannel.value = channel
+  fetchPosts(channel.id)
+}
+
 const searchResults = computed(() => {
   if (!searchQuery.value.trim()) return []
   return allChannels.value.filter(c =>
     c.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-    c.desc.toLowerCase().includes(searchQuery.value.toLowerCase())
+    (c.description && c.description.toLowerCase().includes(searchQuery.value.toLowerCase()))
   )
 })
 
-const toggleJoin = (channel) => {
-  channel.joined = !channel.joined
-  if (channel.joined) activeChannel.value = channel
-}
+const toggleJoin = async (channel) => {
+  try {
+    const userId = authStore.user?.id
+    if (!userId) return
 
-const fakePosts = computed(() => activeChannel.value ? [
-  { id: 1, user: 'ember_w', avatar: '🌿', time: '2h ago', content: `Feeling a lot better after joining ${activeChannel.value.name}. The community here really helps.`, likes: 34, comments: 12 },
-  { id: 2, user: 'nova_k', avatar: '🌙', time: '4h ago', content: 'Anyone else notice that journaling in the morning vs evening has totally different effects on mood?', likes: 58, comments: 27 },
-  { id: 3, user: 'rowan_j', avatar: '✨', time: '6h ago', content: 'Sharing this reminder: rest is productive. You don\'t have to earn rest. 💙', likes: 142, comments: 9 },
-] : [])
+    if (channel.joined) {
+      // Logic for leaving
+      await api.delete(`/forums/${channel.id}/leave?userId=${userId}`)
+      channel.joined = false
+      // If we are currently viewing this channel, we should stay but we are no longer joined
+    } else {
+      await api.post(`/forums/${channel.id}/join`, { userId })
+      channel.joined = true
+      activeChannel.value = channel
+      fetchPosts(channel.id)
+    }
+  } catch (err) {
+    console.error('Failed to toggle join', err)
+  }
+}
 </script>
 
 <template>
@@ -68,7 +117,7 @@ const fakePosts = computed(() => activeChannel.value ? [
         <span class="brand-sub">Mental Health</span>
       </div>
       <div class="navbar__right">
-        <div class="avatar"><span>U</span></div>
+        <div class="avatar"><span>{{ authStore.user?.username?.charAt(0).toUpperCase() || 'U' }}</span></div>
       </div>
     </nav>
 
@@ -90,21 +139,20 @@ const fakePosts = computed(() => activeChannel.value ? [
 
         <!-- FORUMS SIDEBAR -->
         <template v-if="activeTab === 'forums'">
-          <div class="sidebar__section-label">My Channels</div>
+          <div class="sidebar__section-label">Explore Channels</div>
           <div class="channel-list">
             <div
-              v-for="ch in myChannels" :key="ch.id"
+              v-for="ch in allChannels" :key="ch.id"
               :class="['channel-item', { 'channel-item--active': activeChannel?.id === ch.id }]"
-              @click="activeChannel = ch"
+              @click="selectChannel(ch)"
             >
               <span class="ch-icon" :style="{ background: ch.color + '18', borderColor: ch.color + '40' }">{{ ch.icon }}</span>
               <div class="ch-info">
                 <span class="ch-name">{{ ch.name }}</span>
-                <span class="ch-members">{{ ch.members.toLocaleString() }} members</span>
               </div>
               <div class="ch-active-dot" v-if="activeChannel?.id === ch.id"></div>
             </div>
-            <div v-if="myChannels.length === 0" class="ch-empty">No channels yet. Search to add some.</div>
+            <div v-if="allChannels.length === 0" class="ch-empty">No channels found.</div>
           </div>
 
           <!-- ADD CHANNEL -->
@@ -127,16 +175,16 @@ const fakePosts = computed(() => activeChannel.value ? [
                   <div
                     v-for="ch in searchResults" :key="ch.id"
                     class="search-result-item"
+                    @click="selectChannel(ch)"
                   >
                     <span class="ch-icon ch-icon--sm" :style="{ background: ch.color + '18' }">{{ ch.icon }}</span>
                     <div class="ch-info">
                       <span class="ch-name">{{ ch.name }}</span>
-                      <span class="ch-members">{{ ch.members.toLocaleString() }} members</span>
                     </div>
                     <button
                       :class="['join-btn', { 'join-btn--leave': ch.joined }]"
                       @click.stop="toggleJoin(ch)"
-                    >{{ ch.joined ? 'Leave' : '+ Join' }}</button>
+                    >{{ ch.joined ? 'Joined' : '+ Join' }}</button>
                   </div>
                 </div>
               </div>
@@ -172,10 +220,10 @@ const fakePosts = computed(() => activeChannel.value ? [
                 <span class="ch-icon ch-icon--lg" :style="{ background: activeChannel.color + '18', borderColor: activeChannel.color + '30' }">{{ activeChannel.icon }}</span>
                 <div>
                   <h2 class="content__title">{{ activeChannel.name }}</h2>
-                  <p class="content__sub">{{ activeChannel.desc }} · {{ activeChannel.members.toLocaleString() }} members</p>
+                  <p class="content__sub">{{ activeChannel.description || 'Welcome to the community' }}</p>
                 </div>
               </div>
-              <button class="leave-btn" @click="toggleJoin(activeChannel)">Leave channel</button>
+              <button class="leave-btn" @click="toggleJoin(activeChannel)">{{ activeChannel.joined ? 'Joined' : 'Join' }}</button>
             </div>
 
             <!-- POST COMPOSER -->
@@ -187,14 +235,23 @@ const fakePosts = computed(() => activeChannel.value ? [
 
             <!-- POSTS -->
             <div class="posts">
-              <div v-for="post in fakePosts" :key="post.id" class="post">
-                <span class="post-avatar">{{ post.avatar }}</span>
+              <div v-for="post in posts" :key="post.id" class="post" :style="post.is_pinned ? 'border-left: 4px solid #ffd54f; background: #fffdf0;' : ''">
+                <span class="post-avatar">👤</span>
                 <div class="post-body">
                   <div class="post-meta">
-                    <span class="post-user">{{ post.user }}</span>
-                    <span class="post-time">{{ post.time }}</span>
+                    <span v-if="post.is_pinned" style="font-size: 10px; font-weight: bold; color: #fbc02d; margin-right: 8px;">📌 PINNED</span>
+                    <span class="post-user">{{ post.author_name || 'Anonymous' }}</span>
+                    <span class="post-time">{{ new Date(post.created_at).toLocaleDateString() }}</span>
                   </div>
+                  <h4 style="margin: 4px 0;"><%= post.title %></h4>
                   <p class="post-content">{{ post.content }}</p>
+                  
+                  <div v-if="post.attachments && post.attachments.length > 0" class="post-attachments" style="margin-top: 10px;">
+                    <div v-for="att in post.attachments" :key="att.id" style="font-size: 12px; margin-bottom: 4px;">
+                      <a :href="'http://localhost:3000' + att.file_url" target="_blank">📎 {{ att.file_name }}</a>
+                    </div>
+                  </div>
+
                   <div class="post-actions">
                     <button class="post-action">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -228,18 +285,17 @@ const fakePosts = computed(() => activeChannel.value ? [
             <div v-for="ev in events" :key="ev.id" class="event-card">
               <div class="event-card__top">
                 <span class="event-icon">{{ ev.icon }}</span>
-                <span class="event-badge">{{ ev.type }}</span>
+                <span v-if="!ev.is_approved" style="background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 100px; font-size: 10px; font-weight: bold;">Pending approval</span>
+                <span v-else class="event-badge">Approved</span>
               </div>
               <h3 class="event-card__title">{{ ev.title }}</h3>
               <div class="event-card__meta">
-                <span>📅 {{ ev.date }}</span>
-                <span>🕐 {{ ev.time }}</span>
+                <span>🕐 {{ new Date(ev.start_time).toLocaleString('hu-HU') }}</span>
               </div>
               <div class="event-card__footer">
-                <span class="event-host">by {{ ev.host }}</span>
-                <span class="event-attendees">{{ ev.attendees }} attending</span>
+                <span class="event-host">by {{ ev.author_name }}</span>
               </div>
-              <button class="event-rsvp">RSVP</button>
+              <button class="event-rsvp">Interested</button>
             </div>
           </div>
         </template>
@@ -251,15 +307,13 @@ const fakePosts = computed(() => activeChannel.value ? [
         <div class="rp-section">
           <div class="rp-label">Explore Channels</div>
           <div class="rp-channels">
-            <div v-for="ch in allChannels.filter(c => !c.joined).slice(0, 5)" :key="ch.id" class="rp-channel">
+            <div v-for="ch in allChannels.slice(0, 5)" :key="ch.id" class="rp-channel" @click="selectChannel(ch)">
               <span class="ch-icon ch-icon--sm" :style="{ background: ch.color + '18' }">{{ ch.icon }}</span>
               <div class="ch-info">
                 <span class="ch-name">{{ ch.name }}</span>
-                <span class="ch-members">{{ ch.members.toLocaleString() }}</span>
               </div>
-              <button class="join-btn" @click="toggleJoin(ch)">+ Join</button>
+              <button class="join-btn" @click.stop="toggleJoin(ch)">{{ ch.joined ? 'Joined' : '+ Join' }}</button>
             </div>
-            <div v-if="allChannels.filter(c => !c.joined).length === 0" class="ch-empty">You've joined all channels!</div>
           </div>
         </div>
 

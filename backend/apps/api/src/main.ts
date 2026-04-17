@@ -8,7 +8,10 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(ApiModule);
 
-  app.enableCors(); // allow the frontend to access the API
+  app.enableCors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  });
 
   // Serve static files from 'public' folder
   app.useStaticAssets(join(__dirname, '..', '..', '..', 'public'), {
