@@ -14,6 +14,13 @@ const profileUrl = ref(authStore.user?.profile_url || '')
 const isSubmitting = ref(false)
 const statusMsg = ref('')
 
+onMounted(() => {
+  if (authStore.user) {
+    username.value = authStore.user.username || ''
+    profileUrl.value = authStore.user.profile_url || ''
+  }
+})
+
 const initials = computed(() => {
   return username.value.charAt(0).toUpperCase() || 'U'
 })

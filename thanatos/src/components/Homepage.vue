@@ -54,8 +54,8 @@ function logout() {
         <span class="nav-label">Your dashboard</span>
         <div class="profile-container" @click.stop="showDropdown = !showDropdown">
           <div class="avatar">
-            <img src="/placeholderimage.jpeg" alt="Profile" onerror="this.style.display='none'" />
-            <span class="avatar-fallback">U</span>
+            <img v-if="authStore.user?.profile_url" :src="authStore.user.profile_url" alt="Profile" />
+            <span v-else class="avatar-fallback">{{ authStore.user?.username?.charAt(0).toUpperCase() || 'U' }}</span>
           </div>
           <Transition name="dropdown">
             <div v-if="showDropdown" class="dropdown">
