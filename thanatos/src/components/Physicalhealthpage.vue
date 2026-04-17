@@ -53,12 +53,8 @@ const events = ref([
     { id: 2, title: '5K Community Run', date: 'Apr 25, 2026', time: '8:00 AM', host: 'Runners Club', type: 'Meetup', attendees: 128, icon: '🏃' },
 ])
 
-const filteredActivities = computed(() => {
-    if (selectedCategory.value === 'All') return places.value
-    return places.value.filter(act =>
-        act.type.toLowerCase().includes(selectedCategory.value.toLowerCase())
-    )
-})
+const filteredActivities = computed(() => places.value
+)
 
 
 const performGoogleSearch = async () => {
@@ -175,10 +171,10 @@ function openOnMaps(act) {
 }
 
 function setcategoryAndQuerry(cat) {
-    console.log('Selected category:', cat)
     selectedCategory.value = cat
-    searchQuery.value = placeQueries[cat] === 'All' ? 'gyms and parks' : `${placeQueries[cat].split(' ')}`
-    console.log(searchQuery.value)
+    searchQuery.value = cat === 'All' 
+        ? 'gyms and parks' 
+        : placeQueries[cat].join(',')
     performGoogleSearch()
 }
 
