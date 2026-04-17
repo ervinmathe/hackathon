@@ -14,8 +14,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true
   },
-  resolve: {
-
+  server: {
     allowedHosts: ['sisters-protective-spend-mitchell.trycloudflare.com'],
     proxy: {
       '/auth': 'http://localhost:3000',

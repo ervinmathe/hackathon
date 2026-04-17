@@ -10,8 +10,6 @@ const authStore = useAuthStore()
 
 // Local state for the profile fields
 const username = ref(authStore.user?.username || '')
-const displayName = ref(authStore.user?.displayName || '')
-const fullName = ref(authStore.user?.fullName || '')
 const profileUrl = ref(authStore.user?.profile_url || '')
 const isSubmitting = ref(false)
 const statusMsg = ref('')
@@ -69,8 +67,6 @@ async function handleSave() {
 
     const response = await api.post(`/auth/profile/${authStore.user.id}`, {
       username: username.value,
-      displayName: displayName.value,
-      fullName: fullName.value,
       profile_url: profileUrl.value
     })
 
@@ -136,7 +132,7 @@ function handleLogout() {
         <input type="file" ref="fileInput" @change="handleFileUpload" accept="image/*" style="display: none;" />
         
         <div class="avatar-info">
-          <p class="av-name">{{ displayName || username || 'User' }}</p>
+          <p class="av-name">{{ username || 'User' }}</p>
           <p class="av-handle">@{{ username || 'username' }}</p>
           <button class="btn-ghost-sm" @click="triggerFileInput" :disabled="isSubmitting">Change Photo</button>
         </div>
@@ -156,18 +152,6 @@ function handleLogout() {
               <span class="input-prefix">@</span>
               <input v-model="username" class="has-prefix" type="text" placeholder="username" />
             </div>
-          </div>
-          <div class="input-group">
-            <label>Display Name</label>
-            <input v-model="displayName" type="text" placeholder="How you appear to others" />
-          </div>
-        </div>
-
-        <div class="form-col">
-          <p class="section-label">Personal Information</p>
-          <div class="input-group">
-            <label>Full Name</label>
-            <input v-model="fullName" type="text" placeholder="Your real name" />
           </div>
         </div>
       </div>
