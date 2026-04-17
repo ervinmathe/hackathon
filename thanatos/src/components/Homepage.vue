@@ -1,8 +1,10 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const showDropdown = ref(false)
 const scrolled = ref(false)
 const heroVisible = ref(false)
@@ -33,10 +35,7 @@ const scrollToSection = (id) => {
 
 
 function logout() {
-  // Clear authentication state (e.g., localStorage, cookies)
-  localStorage.removeItem('isAuthenticated');
-  // Redirect to login page
-  router.push('/');
+  authStore.logout(router)
 }
 
 </script>
@@ -65,7 +64,7 @@ function logout() {
                 Profile
               </a>
               <div class="dropdown__divider"></div>
-              <a href="#" @click.="logout()" class="dropdown__item dropdown__item--danger">
+              <a href="#" @click.prevent="logout" class="dropdown__item dropdown__item--danger">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 Sign Out
               </a>

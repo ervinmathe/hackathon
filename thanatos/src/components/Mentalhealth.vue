@@ -73,7 +73,10 @@ const fetchEvents = async () => {
   try {
     const userId = authStore.user?.id
     const res = await api.get('/calendar', {
-      params: { userId: userId }
+      params: { 
+        userId: userId,
+        category: 'MENTAL'
+      }
     })
     events.value = res.data.map(e => ({ ...e, icon: '📅' }))
   } catch (err) {
@@ -239,6 +242,7 @@ const submitEvent = async () => {
       location: newEvent.value.location,
       start_time: startFull,
       end_time: endFull,
+      category: 'MENTAL',
       created_by: userId,
       university_id: authStore.user.university_id,
       enrollment_id: authStore.user.enrollment_id
@@ -433,12 +437,12 @@ onMounted(() => {
               </div>
               <h3 class="event-card__title">{{ ev.title }}</h3>
               <div class="event-card__meta">
-                <span>📅 {{ new Date(ev.start_time).toLocaleDateString() }}</span>
-                <span>🕐 {{ new Date(ev.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}</span>
-                <span v-if="ev.location">📍 {{ ev.location }}</span>
+                <div class="meta-row"><span>📅 {{ new Date(ev.start_time).toLocaleDateString() }}</span></div>
+                <div class="meta-row"><span>🕐 {{ new Date(ev.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}</span></div>
+                <div v-if="ev.location" class="meta-row"><span>📍 {{ ev.location }}</span></div>
               </div>
-              <div style="margin-top: auto; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 11px; color: rgba(255,255,255,0.3);">{{ ev.interests_count || 0 }} interested</span>
+              <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 11px; color: rgba(255,255,255,0.3); font-weight: 500;">🔥 {{ ev.interests_count || 0 }} interested</span>
                 <button 
                   class="event-rsvp" 
                   :class="{ 'event-rsvp--active': ev.is_interested }"

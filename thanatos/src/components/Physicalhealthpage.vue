@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader'
+import api from '../api/api'
 import { useAuthStore } from '../stores/auth'
 
 // 1. Initialize variables
@@ -94,8 +95,39 @@ const performGoogleSearch = async () => {
     }
 }
 
+const fetchEvents = async () => {
+    try {
+        const userId = authStore.user?.id
+        const res = await api.get('/calendar', {
+            params: { 
+                userId,
+                category: 'PHYSICAL'
+            }
+        })
+        events.value = res.data.map(e => ({ ...e, icon: '🏃' }))
+    } catch (err) {
+        console.error('Failed to fetch events', err)
+    }
+}
+
+const toggleInterest = async (event) => {
+    try {
+        const userId = authStore.user?.id
+        if (!userId) return
+        await api.post(`/calendar/${event.id}/interest`, { userId })
+        fetchEvents()
+    } catch (err) {
+        console.error('Failed to toggle interest', err)
+    }
+}
+
+const handleLogout = () => {
+    authStore.logout(router)
+}
+
 onMounted(() => {
     getLocationAndSearch()
+    fetchEvents()
 })
 
 const categories = ['All', 'Gym', 'Park', 'Studio', 'Pool', 'Sports']
@@ -133,6 +165,10 @@ const events = ref([
                 <span class="brand-sub">Physical Activity</span>
             </div>
             <div class="navbar__right">
+                <button class="signout-btn-nav" @click="handleLogout">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Sign Out
+                </button>
                 <div v-if="userCoords" class="loc-badge">
                     <span class="pulse-dot"></span> 20km Active
                 </div>
@@ -254,18 +290,24 @@ const events = ref([
                         <div v-for="ev in events" :key="ev.id" class="event-card">
                             <div class="event-card__top">
                                 <span class="event-icon">{{ ev.icon }}</span>
-                                <span class="event-badge">{{ ev.type }}</span>
+                                <span class="event-badge" v-if="ev.location">{{ ev.location }}</span>
                             </div>
                             <h3 class="event-card__title">{{ ev.title }}</h3>
                             <div class="event-card__meta">
-                                <span>📅 {{ ev.date }}</span>
-                                <span>🕐 {{ ev.time }}</span>
+                                <div class="meta-row"><span>📅 {{ new Date(ev.start_time).toLocaleDateString() }}</span></div>
+                                <div class="meta-row"><span>🕐 {{ new Date(ev.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}</span></div>
+                                <div v-if="ev.location" class="meta-row"><span>📍 {{ ev.location }}</span></div>
                             </div>
-                            <div class="event-card__footer">
-                                <span class="event-host">by {{ ev.host }}</span>
-                                <span class="event-attendees">{{ ev.attendees }} going</span>
+                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between;">
+                                <span style="font-size: 11px; color: rgba(255,255,255,0.3); font-weight: 500;">🔥 {{ ev.interests_count || 0 }} interested</span>
+                                <button 
+                                    class="event-rsvp" 
+                                    :class="{ 'event-rsvp--active': ev.is_interested }"
+                                    @click="toggleInterest(ev)"
+                                >
+                                    {{ ev.is_interested ? 'Interested ✓' : 'Join Event' }}
+                                </button>
                             </div>
-                            <button class="event-rsvp">Join Event</button>
                         </div>
                     </div>
                 </template>
@@ -386,6 +428,15 @@ const events = ref([
     border-radius: 50%;
     animation: pulse 2s infinite;
 }
+
+.signout-btn-nav {
+  display: flex; align-items: center; gap: 6px;
+  background: none; border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.4); font-size: 12px; padding: 6px 12px;
+  border-radius: 8px; cursor: pointer; margin-right: 12px;
+  transition: all 0.2s;
+}
+.signout-btn-nav:hover { background: rgba(239, 68, 68, 0.1); color: #f87171; border-color: rgba(239, 68, 68, 0.2); }
 
 /* LAYOUT */
 .layout {
@@ -624,6 +675,12 @@ const events = ref([
     color: #5ee7b0;
     font-weight: 600;
     cursor: pointer;
+    transition: all 0.2s;
+}
+
+.event-rsvp--active {
+    background: #5ee7b0;
+    color: #080b12;
 }
 
 /* RIGHT PANEL */

@@ -12,12 +12,14 @@ export class CalendarController {
   @ApiQuery({ name: 'universityId', required: false })
   @ApiQuery({ name: 'enrollmentId', required: false })
   @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'category', required: false })
   async findAll(
     @Query('universityId') universityId?: string,
     @Query('enrollmentId') enrollmentId?: string,
     @Query('userId') userId?: string,
+    @Query('category') category?: string,
   ) {
-    return this.calendarService.findAll(universityId, enrollmentId, true, userId);
+    return this.calendarService.findAll(universityId, enrollmentId, true, userId, category);
   }
 
   @Post(':id/interest')

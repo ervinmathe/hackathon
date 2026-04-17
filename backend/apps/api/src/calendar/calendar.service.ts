@@ -5,7 +5,7 @@ import { Knex } from 'knex';
 export class CalendarService {
   constructor(@Inject('KNEX_CONNECTION') private readonly knex: Knex) {}
 
-  async findAll(universityId?: string, enrollmentId?: string, onlyApproved = true, currentUserId?: string) {
+  async findAll(universityId?: string, enrollmentId?: string, onlyApproved = true, currentUserId?: string, category?: string) {
     const query = this.knex('calendar_events')
       .join('users', 'calendar_events.created_by', 'users.id')
       .leftJoin('event_interests', 'calendar_events.id', 'event_interests.event_id')
@@ -18,6 +18,10 @@ export class CalendarService {
 
     if (onlyApproved) {
       query.where('calendar_events.is_approved', true);
+    }
+
+    if (category) {
+      query.where('calendar_events.category', category);
     }
 
     if (universityId) {
