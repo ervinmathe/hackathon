@@ -357,4 +357,28 @@ input:focus {
   transform: translateY(-1px);
   box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.4);
 }
+
+.logout-icon {
+  width: 15px;
+  height: 15px;
+  opacity: 0.8;
+}
+
+/* --- RESZPONZÍV --- */
+@media (max-width: 560px) {
+  .profile-card {
+    padding: 28px 20px;
+    margin-top: 80px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .btn-save,
+  .btn-logout {
+    width: 100%;
+  }
+}
 </style>
