@@ -1,10 +1,23 @@
+<script>
+function loadGoogleMaps() {
+    return new Promise((resolve) => {
+        if (window.google?.maps) return resolve()
+        const script = document.createElement('script')
+        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyDuXiUzwNIlxXIlnO9Z-mJ51sdUV2lPC1Q&libraries=places&v=weekly`
+        script.async = true
+        script.onload = resolve
+        document.head.appendChild(script)
+    })
+}
+
+
+</script>
 <script setup>
+
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { setOptions, importLibrary } from '@googlemaps/js-api-loader'
-const { Place } = await google.maps.importLibrary("places")
 
-// 1. Initialize variables
+///const center = new LatLng(userCoords.value.lat, userCoords.value.lng)
 const router = useRouter()
 const activeTab = ref('discover')
 const searchQuery = ref('')
@@ -14,14 +27,102 @@ const userCoords = ref(null)
 const locationError = ref(null)
 const places = ref([])
 
+const categories = [
+  'All',
+  'Strength',
+  'Cardio',
+  'Sports',
+  'Outdoor',
+  'Recovery',
+  'Group',
+  'Solo'
+]
 
-setOptions({
-    apiKey: "AIzaSyDuXiUzwNIlxXIlnO9Z-mJ51sdUV2lPC1Q",
-    version: "weekly",
-    libraries: ["places"]
+const placeQueries = {
+  Strength: ['gym', 'fitness center'],
+  Cardio: ['running track', 'stadium', 'fitness center'],
+  Sports: ['football field', 'basketball court', 'sports complex'],
+  Outdoor: ['park', 'hiking area'],
+  Recovery: ['spa', 'wellness center', 'yoga studio'],
+  Group: ['sports club', 'recreation center'],
+  Solo: ['gym', 'running track', 'park']
+}
+
+const events = ref([
+    { id: 1, title: 'Sunrise Yoga in the Park', date: 'Apr 22, 2026', time: '6:30 AM', host: 'Zen Flow', type: 'Class', attendees: 45, icon: '🧘' },
+    { id: 2, title: '5K Community Run', date: 'Apr 25, 2026', time: '8:00 AM', host: 'Runners Club', type: 'Meetup', attendees: 128, icon: '🏃' },
+])
+
+const filteredActivities = computed(() => {
+    if (selectedCategory.value === 'All') return places.value
+    return places.value.filter(act =>
+        act.type.toLowerCase().includes(selectedCategory.value.toLowerCase())
+    )
 })
 
-// 3. Logic to get coordinates
+
+const performGoogleSearch = async () => {
+    if (!userCoords.value) return
+    isLoading.value = true
+    locationError.value = null
+
+    try {
+        await loadGoogleMaps()
+
+        const { Place } = await google.maps.importLibrary("places")
+
+        // Calculate a bounding box ~20km around the user
+        const lat = userCoords.value.lat
+        const lng = userCoords.value.lng
+        const delta = 0.18 // ~20km in degrees
+
+        const request = {
+            textQuery: searchQuery.value || 'gyms and parks',
+            locationRestriction: new google.maps.LatLngBounds(   // ← change this
+                { lat: lat - delta, lng: lng - delta },
+                { lat: lat + delta, lng: lng + delta }
+            ),
+            maxResultCount: 15,
+            fields: ['id', 'displayName', 'formattedAddress', 'rating', 'types', 'location', 'photos']
+        }
+
+        const { places: results } = await Place.searchByText(request)
+
+        if (results && results.length > 0) {
+            places.value = await Promise.all(results.map(async (p) => {
+                let photoUrl = null
+
+                try {
+                    // Fetch the full place details to get photos
+                    await p.fetchFields({ fields: ['photos'] })
+                    photoUrl = p.photos?.[0]?.getURI({ maxWidth: 800 }) ?? null
+                } catch (e) {
+                    console.warn('Photo fetch failed for', p.displayName, e)
+                }
+                return {
+                    id: p.id,
+                    name: p.displayName,
+                    address: p.formattedAddress,
+                    rating: p.rating || 'N/A',
+                    type: p.types?.[0] || 'activity',
+                    icon: '📍',
+                    tags: p.types?.slice(0, 3) || [],
+                    color: '#5ee7b0',
+                    photo: photoUrl
+                }
+            }))
+
+        } else {
+            locationError.value = "No activities found in this area."
+        }
+    } catch (err) {
+        console.error("Search failed:", err)
+        locationError.value = "Search failed: " + err.message
+    } finally {
+        isLoading.value = false
+    }
+}
+
 const getLocationAndSearch = () => {
     isLoading.value = true
     if (!navigator.geolocation) {
@@ -29,97 +130,66 @@ const getLocationAndSearch = () => {
         isLoading.value = false
         return
     }
-
     navigator.geolocation.getCurrentPosition(
         (position) => {
-            userCoords.value = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-            }
+            //console.log('LAT:', position.coords.latitude)
+            //console.log('LNG:', position.coords.longitude)
+            //console.log('ACCURACY:', position.coords.accuracy, 'meters')
+            userCoords.value = { lat: position.coords.latitude, lng: position.coords.longitude }
             performGoogleSearch()
         },
-        (error) => {
+        (err) => {
+            locationError.value = 'Could not get GPS location'
             isLoading.value = false
-            locationError.value = "Location access denied."
-        }
+        },
+        { enableHighAccuracy: true }
     )
 }
 
-const performGoogleSearch = async () => {
-    if (!userCoords.value) return;
-    isLoading.value = true;
-
+onMounted(async () => {
     try {
-        // 1. Import the NEW Place class and the search function
-        const { Place } = await importLibrary("places");
-
-        // 2. Define your search request
-        // The 'New' API uses 'textQuery' instead of 'keyword'
-        const request = {
-            textQuery: searchQuery.value || 'gyms and parks',
-            locationBias: {
-                center: { lat: userCoords.value.lat, lng: userCoords.value.lng },
-                radius: 5000 // 5km radius
-            },
-            maxResultCount: 15,
-            // Field masking: Only ask for what you need to save money/quota
-            fields: ['id', 'displayName', 'formattedAddress', 'rating', 'types', 'location']
-        };
-
-        // 3. Execute the search
-        const { places: results } = await Place.searchByText(request);
-
-        if (results && results.length > 0) {
-            places.value = results.map(p => ({
-                id: p.id,
-                name: p.displayName, // New API uses displayName
-                address: p.formattedAddress,
-                rating: p.rating || 'N/A',
-                type: p.types ? p.types[0] : 'activity',
-                icon: '📍',
-                tags: p.types ? p.types.slice(0, 3) : [],
-                color: '#5ee7b0'
-            }));
-            locationError.value = null;
-        } else {
-            locationError.value = "No activities found in this area.";
+        const permission = await navigator.permissions.query({ name: 'geolocation' })
+        if (permission.state === 'denied') {
+            locationError.value = 'denied'
+            isLoading.value = false
+            return
         }
-    } catch (err) {
-
-        console.error("New Places API Search failed:", err);
-        locationError.value = "API is warming up. Please try again in a few minutes.";
-    } finally {
-        isLoading.value = false;
+    } catch (e) {
+        // permissions API not supported, just proceed
     }
+    getLocationAndSearch()
+
+    /*searchQuery.value.addEventListener('input', () => {
+        if (searchQuery.value.trim() === '') {
+            searchQuery.value = 'gyms and parks'
+            
+        }
+    })*/
+})
+
+function openOnMaps(act) {
+    if(!act) return 
+    const query = encodeURIComponent(act.name)
+    const url = `https://www.google.com/maps/search/?api=1&query=${query}&query_place_id=${act.id}`
+    window.open(url, '_blank')
 }
 
-onMounted(() => {
-    getLocationAndSearch()
-})
+function setcategoryAndQuerry(cat) {
+    console.log('Selected category:', cat)
+    selectedCategory.value = cat
+    searchQuery.value = placeQueries[cat] === 'All' ? 'gyms and parks' : `${placeQueries[cat].split(' ')}`
+    console.log(searchQuery.value)
+    performGoogleSearch()
+}
 
-const categories = ['All', 'Gym', 'Park', 'Studio', 'Pool', 'Sports']
-
-const filteredActivities = computed(() => {
-    if (selectedCategory.value === 'All') return places.value
-    // Normalize string comparison for categories
-    return places.value.filter(act => 
-        act.type.toLowerCase().includes(selectedCategory.value.toLowerCase())
-    )
-})
-
-const events = ref([
-    { id: 1, title: 'Sunrise Yoga in the Park', date: 'Apr 22, 2026', time: '6:30 AM', host: 'Zen Flow', type: 'Class', attendees: 45, icon: '🧘' },
-    { id: 2, title: '5K Community Run', date: 'Apr 25, 2026', time: '8:00 AM', host: 'Runners Club', type: 'Meetup', attendees: 128, icon: '🏃' },
-])
 
 
 </script>
 
 <template>
     <div class="page">
-        <!-- NAVBAR -->
         <nav class="navbar">
-            <button class="back-btn" @click="getloginvalidation()">
+            <button class="back-btn" @click="router.push('/home')">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="15 18 9 12 15 6" />
                 </svg>
@@ -135,7 +205,6 @@ const events = ref([
                 <div v-if="userCoords" class="loc-badge">
                     <span class="pulse-dot"></span> 20km Active
                 </div>
-                <div class="avatar"><span>U</span></div>
             </div>
         </nav>
 
@@ -150,7 +219,7 @@ const events = ref([
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <circle cx="11" cy="11" r="8" />
-                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                         </svg>
                         Discover
                     </button>
@@ -170,7 +239,7 @@ const events = ref([
                 <div class="category-list">
                     <button v-for="cat in categories" :key="cat"
                         :class="['cat-item', { 'cat-item--active': selectedCategory === cat }]"
-                        @click="selectedCategory = cat">
+                        @click="setcategoryAndQuerry(cat)">
                         {{ cat }}
                     </button>
                 </div>
@@ -213,8 +282,12 @@ const events = ref([
 
                         <template v-else>
                             <div v-for="act in filteredActivities" :key="act.id" class="listing-card">
-                                <div class="listing-card__visual"
-                                    :style="{ background: act.color + '15', borderBottom: '1px solid ' + act.color + '20' }">
+                                <div v-if="act.photo != null" class="listing-card-photo">
+                                    <img :src="act.photo" alt="Photo of {{ act.name }}" class="listing-photo" />
+                                    <span class="listing-dist">{{ act.distance }} away</span>
+                                </div>
+                                <div v-if="act.photo == null" class="listing-card__visual"
+                                    :style="{ borderBottom: '1px solid ' + act.color + '20' }">
                                     <span class="listing-emoji">{{ act.icon }}</span>
                                     <span class="listing-dist">{{ act.distance }} away</span>
                                 </div>
@@ -229,7 +302,7 @@ const events = ref([
                                         <span v-for="tag in act.tags" :key="tag" class="tag">{{ tag }}</span>
                                     </div>
                                 </div>
-                                <button class="view-btn">View on Google Maps</button>
+                                <button class="view-btn" @click="openOnMaps(act)">View on Google Maps</button>
                             </div>
                         </template>
 
@@ -515,6 +588,27 @@ const events = ref([
     overflow: hidden;
     display: flex;
     flex-direction: column;
+}
+
+.listing-card:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 16px rgba(94, 231, 176, 0.1);
+    transform: translateY(-5px);
+    transition: all 0.3s ease;
+}
+
+.listing-card-photo {
+    position: relative;
+    width: 100%;
+    height: 140px;
+    overflow: hidden;
+}
+
+.listing-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
 }
 
 .listing-card__visual {
