@@ -6,7 +6,8 @@
 <template>
     <header>
         <nav class="headernavigation">
-            <a href="#" @click.prevent="$router.replace('/login')">Log Out</a>
+            <img src="">
+            <a href="#" @click.prevent="$router.replace('/')">Log Out</a>
         </nav>
     </header>
     <section>
