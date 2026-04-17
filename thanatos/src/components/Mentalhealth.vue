@@ -25,7 +25,7 @@ const fetchMyChannels = async () => {
     const allRes = await api.get('/forums')
     
     // 2. Fetch specific forums for THIS user
-    const myRes = await api.get(`/forums/my?userId=${userId}`)
+    const myRes = await api.get(`/forums/my/${userId}`)
     const myForumIds = myRes.data.map(f => f.id)
 
     allChannels.value = allRes.data.map(ch => ({
