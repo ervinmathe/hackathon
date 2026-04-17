@@ -11,8 +11,13 @@ export class ForumsController {
   @ApiOperation({ summary: 'List all subjects/forums' })
   @ApiQuery({ name: 'universityId', required: false, description: 'Filter by university ID' })
   @ApiQuery({ name: 'enrollmentId', required: false, description: 'Filter by enrollment ID' })
-  async findAll(@Query('universityId') universityId?: string, @Query('enrollmentId') enrollmentId?: string) {
-    return this.forumsService.findAll(universityId, enrollmentId);
+  @ApiQuery({ name: 'search', required: false, description: 'Search by subject name (min 3 chars)' })
+  async findAll(
+    @Query('universityId') universityId?: string,
+    @Query('enrollmentId') enrollmentId?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.forumsService.findAll(universityId, enrollmentId, search);
   }
 
   @Get(':id/posts')

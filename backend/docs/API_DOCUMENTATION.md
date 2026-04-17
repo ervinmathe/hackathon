@@ -1,6 +1,6 @@
-# API & CMS Dokumentáció - Hackathon Backend (v2)
+# API & CMS Dokumentáció - Hackathon Backend (v2.1)
 
-Ez a dokumentáció tartalmazza a `thanatos` Vue frontend számára készült publikus API, valamint az adminisztratív CMS végpontjait. Az új verzió tartalmazza az **Egyetemek (Universities)** kezelését is.
+Ez a dokumentáció tartalmazza a `thanatos` Vue frontend számára készült publikus API, valamint az adminisztratív CMS végpontjait.
 
 ---
 
@@ -14,12 +14,19 @@ Ez a dokumentáció tartalmazza a `thanatos` Vue frontend számára készült pu
 *   `POST /auth/login`: Felhasználó bejelentkezés. Visszaadja a felhasználó adatait (id, role, university_id, enrollment_id).
 
 ### Fórumok és Tantárgyak (`/forums`)
-*   `GET /forums`: Lekéri a tantárgyakat (fórumokat). Szűrhető: `?universityId=UUID&enrollmentId=UUID`.
+*   `GET /forums`: Lekéri a tantárgyakat (fórumokat).
+    *   **Szűrés:** `?universityId=UUID&enrollmentId=UUID`
+    *   **Keresés:** `?search=szoveg` (min. 3 karakter, case-insensitive, több szavas támogatás).
 *   `GET /forums/:id/posts`: Lekéri az adott tantárgyhoz tartozó összes posztot és fájljaikat.
 
 ### Posztok és Jegyzetek (`/posts`)
 *   `POST /posts`: Új bejegyzés létrehozása. **Multipart/form-data** kérést igényel!
     *   Mezők: `forum_id`, `author_id`, `title`, `content`, `attachments` (fájlok).
+
+### Hozzászólások (`/comments`) - *ÚJ*
+*   `GET /comments/post/:postId`: Lekéri egy adott poszthoz tartozó összes hozzászólást (időrendben, szerző nevével).
+*   `POST /comments`: Új hozzászólás fűzése egy poszthoz.
+    *   Body: `{ "post_id": "UUID", "author_id": "UUID", "content": "Szöveg..." }`
 
 ---
 

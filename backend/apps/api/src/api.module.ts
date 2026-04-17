@@ -9,11 +9,13 @@ import { ForumsController } from './forums/forums.controller';
 import { ForumsService } from './forums/forums.service';
 import { PostsController } from './posts/posts.controller';
 import { PostsService } from './posts/posts.service';
+import { CommentsModule } from './comments/comments.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    CommentsModule,
   ],
   controllers: [
     ApiController,

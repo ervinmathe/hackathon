@@ -4,12 +4,13 @@
  */
 exports.up = async function (knex) {
   // 1. Create universities table
-  await knex.schema.createTable('universities', (table) => {
+  await knex.schema.createTableIfNotExists('universities', (table) => {
     table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
-    table.string('name').notNullable().unique();
+    table.string('name').notNullable();
     table.text('description').nullable();
     table.timestamps(true, true);
   });
+
 
   // Since we have existing data from the seed and adding a NOT NULL column 
   // without a default would fail in Postgres, we clear the existing data first.
