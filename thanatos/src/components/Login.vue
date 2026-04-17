@@ -4,6 +4,7 @@ import router , { allow } from '../router'
 function login() {
   allow.value = true
   router.replace('/home')
+  aloow.value = false
 }
 </script>
 
