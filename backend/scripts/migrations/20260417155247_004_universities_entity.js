@@ -3,39 +3,56 @@
  * @returns { Promise<void> }
  */
 exports.up = async function (knex) {
-  // 1. Create universities table
-  await knex.schema.createTableIfNotExists('universities', (table) => {
-    table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
-    table.string('name').notNullable();
-    table.text('description').nullable();
-    table.timestamps(true, true);
-  });
+  // 1. Create universities table if not exists
+  const hasUniversities = await knex.schema.hasTable('universities');
+  if (!hasUniversities) {
+    await knex.schema.createTable('universities', (table) => {
+      table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.string('name').notNullable();
+      table.text('description').nullable();
+      table.timestamps(true, true);
+    });
+  }
 
+  // Clear data to avoid constraint issues with new NOT NULL columns
+  // (Only if we are actually adding columns)
+  const hasUniEnroll = await knex.schema.hasColumn('enrollments', 'university_id');
+  if (!hasUniEnroll) {
+    // Csak akkor törlünk, ha létezik a tábla (rollback után a comments pl még nem létezik)
+    const tablesToDelete = [
+      'post_attachments',
+      'calendar_events',
+      'comments',
+      'posts',
+      'forums',
+      'users',
+      'enrollments'
+    ];
 
-  // Since we have existing data from the seed and adding a NOT NULL column 
-  // without a default would fail in Postgres, we clear the existing data first.
-  // This is safe because it's just a development seed.
-  await knex('post_attachments').del();
-  await knex('calendar_events').del();
-  await knex('posts').del();
-  await knex('forums').del();
-  await knex('users').del();
-  await knex('enrollments').del();
+    for (const tableName of tablesToDelete) {
+      if (await knex.schema.hasTable(tableName)) {
+        await knex(tableName).del();
+      }
+    }
 
-  // 2. Add university_id to enrollments
-  await knex.schema.alterTable('enrollments', (table) => {
-    table.uuid('university_id').notNullable().references('id').inTable('universities').onDelete('CASCADE');
-  });
+    await knex.schema.alterTable('enrollments', (table) => {
+      table.uuid('university_id').notNullable().references('id').inTable('universities').onDelete('CASCADE');
+    });
+  }
 
-  // 3. Add university_id to forums
-  await knex.schema.alterTable('forums', (table) => {
-    table.uuid('university_id').notNullable().references('id').inTable('universities').onDelete('CASCADE');
-  });
+  const hasUniForums = await knex.schema.hasColumn('forums', 'university_id');
+  if (!hasUniForums) {
+    await knex.schema.alterTable('forums', (table) => {
+      table.uuid('university_id').notNullable().references('id').inTable('universities').onDelete('CASCADE');
+    });
+  }
 
-  // 4. Add university_id to users
-  await knex.schema.alterTable('users', (table) => {
-    table.uuid('university_id').notNullable().references('id').inTable('universities').onDelete('CASCADE');
-  });
+  const hasUniUsers = await knex.schema.hasColumn('users', 'university_id');
+  if (!hasUniUsers) {
+    await knex.schema.alterTable('users', (table) => {
+      table.uuid('university_id').notNullable().references('id').inTable('universities').onDelete('CASCADE');
+    });
+  }
 };
 
 /**
@@ -43,17 +60,26 @@ exports.up = async function (knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function (knex) {
-  await knex.schema.alterTable('users', (table) => {
-    table.dropColumn('university_id');
-  });
+  const hasUniUsers = await knex.schema.hasColumn('users', 'university_id');
+  if (hasUniUsers) {
+    await knex.schema.alterTable('users', (table) => {
+      table.dropColumn('university_id');
+    });
+  }
 
-  await knex.schema.alterTable('forums', (table) => {
-    table.dropColumn('university_id');
-  });
+  const hasUniForums = await knex.schema.hasColumn('forums', 'university_id');
+  if (hasUniForums) {
+    await knex.schema.alterTable('forums', (table) => {
+      table.dropColumn('university_id');
+    });
+  }
 
-  await knex.schema.alterTable('enrollments', (table) => {
-    table.dropColumn('university_id');
-  });
+  const hasUniEnroll = await knex.schema.hasColumn('enrollments', 'university_id');
+  if (hasUniEnroll) {
+    await knex.schema.alterTable('enrollments', (table) => {
+      table.dropColumn('university_id');
+    });
+  }
 
   await knex.schema.dropTableIfExists('universities');
 };
