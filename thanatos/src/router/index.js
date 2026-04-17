@@ -13,10 +13,10 @@ const router = createRouter({
   routes: [ 
     { path: '/' , component: Login , meta: {title: 'Login', requiresAuth: false}},
     { path: '/home' , component: HomePage , meta: {title: 'Home', requiresAuth: true}},
-    {path: '/profile', component: Profile, meta: {title: 'Profile', requiresAuth: true}},
-    {path: '/learnmore', component: Learnmore, meta: {title: 'Learn More', requiresAuth: true}},
-    {path: '/mentalhealth', component: Mentalhealth, meta: {title: 'Mental Health', requiresAuth: true}},
-    {path: '/physicalhealth', component: Physicalhealth, meta: {title: 'Physical Health', requiresAuth: true}}
+    { path: '/profile', component: Profile, meta: {title: 'Profile', requiresAuth: true}},
+    { path: '/learnmore', component: Learnmore, meta: {title: 'Learn More', requiresAuth: true}},
+    { path: '/mental-health', component: Mentalhealth, meta: {title: 'Mental Health', requiresAuth: true}},
+    { path: '/physical-health', component: Physicalhealth, meta: {title: 'Physical Health', requiresAuth: true}}
   ],
 })
 
