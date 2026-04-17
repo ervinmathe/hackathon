@@ -15,6 +15,149 @@ const events = ref([])
 const myChannels = ref([])
 const activeChannel = ref(null)
 const posts = ref([])
+const selectedPost = ref(null)
+const showPostModal = ref(false)
+const showCreateModal = ref(false)
+const showEditModal = ref(false)
+const editingPost = ref({ title: '', description: '', content: '' })
+const isSubmitting = ref(false)
+
+const openPost = async (post) => {
+  try {
+    const res = await api.get(`/posts/${post.id}`)
+    selectedPost.value = res.data
+    showPostModal.value = true
+  } catch (err) {
+    console.error('Failed to fetch post details', err)
+  }
+}
+
+const deletePost = async (post, e) => {
+  if (e) e.stopPropagation()
+  if (!confirm('Are you sure you want to delete this post?')) return
+
+  try {
+    await api.delete(`/posts/${post.id}`)
+    if (activeChannel.value) fetchPosts(activeChannel.value.id)
+    showPostModal.value = false
+  } catch (err) {
+    console.error('Failed to delete post', err)
+  }
+}
+
+const openEditModal = (post, e) => {
+  if (e) e.stopPropagation()
+  editingPost.value = { ...post }
+  showEditModal.value = true
+}
+
+const submitEdit = async () => {
+  if (!editingPost.value.title.trim() || !editingPost.value.content.trim()) {
+    alert('Title and Content are required!')
+    return
+  }
+
+  if (isSubmitting.value) return
+  isSubmitting.value = true
+
+  try {
+    await api.patch(`/posts/${editingPost.value.id}`, editingPost.value)
+    showEditModal.value = false
+    if (activeChannel.value) fetchPosts(activeChannel.value.id)
+    if (showPostModal.value) {
+      // Refresh the detailed view
+      const res = await api.get(`/posts/${editingPost.value.id}`)
+      selectedPost.value = res.data
+    }
+  } catch (err) {
+    console.error('Failed to update post', err)
+  } finally {
+    isSubmitting.value = false
+  }
+}
+const fileInput = ref(null)
+const selectedFiles = ref([])
+
+// New post form
+const newPost = ref({
+  title: '',
+  description: '',
+  content: ''
+})
+
+const handleFileSelect = (e) => {
+  const files = Array.from(e.target.files)
+  // Add new files to existing selection
+  selectedFiles.value = [...selectedFiles.value, ...files]
+}
+
+const removeFile = (index) => {
+  selectedFiles.value.splice(index, 1)
+}
+
+const submitPost = async () => {
+  // Validation: No empty posts
+  if (!newPost.value.title.trim() || !newPost.value.content.trim()) {
+    alert('Title and Content are required!')
+    return
+  }
+
+  if (isSubmitting.value) return
+  isSubmitting.value = true
+
+  try {
+    const userId = authStore.user?.id
+    if (!userId || !activeChannel.value) {
+      isSubmitting.value = false
+      return
+    }
+
+    const formData = new FormData()
+    formData.append('title', newPost.value.title)
+    formData.append('description', newPost.value.description)
+    formData.append('content', newPost.value.content)
+    formData.append('forum_id', activeChannel.value.id)
+    formData.append('author_id', userId)
+    
+    selectedFiles.value.forEach(file => {
+      formData.append('attachments', file)
+    })
+
+    await api.post('/posts', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    showCreateModal.value = false
+    newPost.value = { title: '', description: '', content: '' }
+    selectedFiles.value = []
+    fetchPosts(activeChannel.value.id)
+  } catch (err) {
+    console.error('Failed to create post', err)
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+const togglePin = async (post, e) => {
+  e.stopPropagation() // Prevent opening the post modal
+  try {
+    await api.patch(`/posts/${post.id}/pin`)
+    if (activeChannel.value) {
+      fetchPosts(activeChannel.value.id)
+    }
+  } catch (err) {
+    console.error('Failed to toggle pin', err)
+  }
+}
+
+const canPin = computed(() => {
+  return ['ADMIN', 'LESSADMIN'].includes(authStore.user?.role)
+})
+
+const canManagePost = (post) => {
+  if (!authStore.user) return false
+  return authStore.user.id === post.author_id || ['ADMIN', 'LESSADMIN'].includes(authStore.user.role)
+}
 
 const fetchMyChannels = async () => {
   try {
@@ -227,46 +370,48 @@ const toggleJoin = async (channel) => {
             </div>
 
             <!-- POST COMPOSER -->
-            <div class="composer">
-              <span class="composer-avatar">U</span>
+            <div v-if="activeChannel.joined" class="composer" @click="showCreateModal = true" style="cursor: pointer;">
+              <span class="composer-avatar">{{ authStore.user?.username?.charAt(0).toUpperCase() }}</span>
               <div class="composer-input">Write something to the community…</div>
               <button class="composer-btn">Post</button>
             </div>
 
             <!-- POSTS -->
             <div class="posts">
-              <div v-for="post in posts" :key="post.id" class="post" :style="post.is_pinned ? 'border-left: 4px solid #ffd54f; background: #fffdf0;' : ''">
-                <span class="post-avatar">👤</span>
+              <div v-for="post in posts" :key="post.id" class="post" 
+                   :style="post.is_pinned ? 'border-left: 4px solid #5ee7b0; background: rgba(94, 231, 176, 0.03);' : ''"
+                   @click="openPost(post)" style="cursor: pointer;">
+                <div class="post-avatar"><span>{{ post.author_name?.charAt(0).toUpperCase() }}</span></div>
                 <div class="post-body">
                   <div class="post-meta">
-                    <span v-if="post.is_pinned" style="font-size: 10px; font-weight: bold; color: #fbc02d; margin-right: 8px;">📌 PINNED</span>
+                    <span v-if="post.is_pinned" style="font-size: 10px; font-weight: bold; color: #5ee7b0; margin-right: 8px;">📌 PINNED</span>
                     <span class="post-user">{{ post.author_name || 'Anonymous' }}</span>
                     <span class="post-time">{{ new Date(post.created_at).toLocaleDateString() }}</span>
+                    
+                    <button v-if="canPin" class="pin-btn" @click.stop="togglePin(post, $event)" 
+                            style="margin-left: auto; background: none; border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 4px; cursor: pointer;">
+                      {{ post.is_pinned ? 'Unpin' : 'Pin' }}
+                    </button>
                   </div>
-                  <h4 style="margin: 4px 0;"><%= post.title %></h4>
-                  <p class="post-content">{{ post.content }}</p>
+                  <h4 style="margin: 4px 0; font-family: 'Sora', sans-serif;">{{ post.title }}</h4>
+                  <p class="post-content">{{ post.description }}</p>
                   
                   <div v-if="post.attachments && post.attachments.length > 0" class="post-attachments" style="margin-top: 10px;">
                     <div v-for="att in post.attachments" :key="att.id" style="font-size: 12px; margin-bottom: 4px;">
-                      <a :href="'http://localhost:3000' + att.file_url" target="_blank">📎 {{ att.file_name }}</a>
+                      <span @click.stop>📎 {{ att.file_name }}</span>
                     </div>
                   </div>
 
                   <div class="post-actions">
                     <button class="post-action">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                      {{ post.likes }}
-                    </button>
-                    <button class="post-action">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      {{ post.comments }} replies
-                    </button>
-                    <button class="post-action">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                      Share
+                      Comments
                     </button>
                   </div>
                 </div>
+              </div>
+              <div v-if="posts.length === 0" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.2);">
+                No materials here yet.
               </div>
             </div>
           </template>
@@ -329,6 +474,98 @@ const toggleJoin = async (channel) => {
         </div>
       </aside>
 
+    </div>
+
+    <!-- CREATE POST MODAL -->
+    <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Create New Post</h3>
+          <button class="close-btn" @click="showCreateModal = false">×</button>
+        </div>
+        <div class="modal-body">
+          <input v-model="newPost.title" placeholder="Post Title" class="modal-input" />
+          <input v-model="newPost.description" placeholder="Short summary" class="modal-input" />
+          <textarea v-model="newPost.content" placeholder="Content details..." class="modal-textarea"></textarea>
+          
+          <div class="file-upload">
+            <label class="file-label">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              Attach Files
+              <input type="file" ref="fileInput" multiple @change="handleFileSelect" hidden />
+            </label>
+            <div v-if="selectedFiles.length" class="selected-files">
+              <span v-for="f in selectedFiles" :key="f.name" class="file-tag">{{ f.name }}</span>
+            </div>
+          </div>
+
+          <button class="submit-btn" :disabled="isSubmitting" @click="submitPost">
+            {{ isSubmitting ? 'Posting...' : 'Share with Community' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- POST DETAIL MODAL -->
+    <div v-if="showPostModal && selectedPost" class="modal-overlay" @click.self="showPostModal = false">
+      <div class="modal-card modal-card--lg">
+        <div class="modal-head">
+          <div class="post-user">
+            <div class="post-avatar"><span>{{ selectedPost.author_name?.charAt(0) }}</span></div>
+            <div>
+              <div class="post-author">{{ selectedPost.author_name }}</div>
+              <div class="post-time">{{ new Date(selectedPost.created_at).toLocaleString() }}</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button v-if="canManagePost(selectedPost)" class="action-btn-sm" @click="openEditModal(selectedPost)">Edit</button>
+            <button v-if="canManagePost(selectedPost)" class="action-btn-sm action-btn-sm--danger" @click="deletePost(selectedPost)">Delete</button>
+            <button class="close-btn" @click="showPostModal = false">×</button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <h2 class="detail-title">{{ selectedPost.title }}</h2>
+          <p class="detail-content">{{ selectedPost.content }}</p>
+
+          <div v-if="selectedPost.attachments?.length" class="detail-section">
+            <label>Attachments</label>
+            <div class="detail-attachments">
+              <a v-for="att in selectedPost.attachments" :key="att.id" :href="api.defaults.baseURL + att.file_url" target="_blank" class="att-link">
+                📎 {{ att.file_name }}
+              </a>
+            </div>
+          </div>
+
+          <div class="detail-section">
+            <label>Comments ({{ selectedPost.comments?.length || 0 }})</label>
+            <div class="comments-list">
+              <div v-for="com in selectedPost.comments" :key="com.id" class="comment">
+                <span class="comment-user">{{ com.author_name }}:</span>
+                <p class="comment-text">{{ com.content }}</p>
+              </div>
+              <div v-if="!selectedPost.comments?.length" class="empty-state-sm">No comments yet.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDIT POST MODAL -->
+    <div v-if="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h3>Edit Post</h3>
+          <button class="close-btn" @click="showEditModal = false">×</button>
+        </div>
+        <div class="modal-body">
+          <input v-model="editingPost.title" placeholder="Post Title" class="modal-input" />
+          <input v-model="editingPost.description" placeholder="Short summary" class="modal-input" />
+          <textarea v-model="editingPost.content" placeholder="Content details..." class="modal-textarea"></textarea>
+          <button class="submit-btn" :disabled="isSubmitting" @click="submitEdit">
+            {{ isSubmitting ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -657,4 +894,55 @@ const toggleJoin = async (channel) => {
   .sidebar { width: 200px; min-width: 200px; }
   .content { padding: 20px 16px; }
 }
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+  z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-card {
+  background: #111722; border: 1px solid rgba(255,255,255,0.08); border-radius: 24px;
+  width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+}
+.modal-card--lg { max-width: 800px; }
+.modal-head { padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; }
+.modal-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.modal-input, .modal-textarea {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  padding: 12px 16px; border-radius: 12px; color: #fff; font-family: inherit; width: 100%; outline: none;
+}
+.modal-textarea { min-height: 120px; resize: vertical; }
+.submit-btn {
+  background: #5ee7b0; color: #080b12; border: none; padding: 14px; border-radius: 12px;
+  font-weight: 700; cursor: pointer; transition: transform 0.2s;
+}
+.submit-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(94,231,176,0.3); }
+
+.detail-title { font-family: 'Sora', sans-serif; font-size: 24px; margin-bottom: 8px; }
+.detail-content { font-size: 15px; color: rgba(255,255,255,0.7); line-height: 1.6; }
+.detail-section { margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 20px; }
+.detail-section label { font-size: 11px; text-transform: uppercase; color: rgba(255,255,255,0.3); display: block; margin-bottom: 12px; }
+.att-link { display: inline-block; padding: 8px 16px; background: rgba(255,255,255,0.04); border-radius: 8px; color: #5ee7b0; text-decoration: none; margin-right: 10px; font-size: 13px; }
+
+.comments-list { display: flex; flex-direction: column; gap: 12px; }
+.comment { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; }
+.comment-user { font-size: 12px; font-weight: 700; color: #3b9eff; display: block; margin-bottom: 4px; }
+.comment-text { font-size: 13px; color: rgba(255,255,255,0.8); }
+.close-btn { background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; line-height: 1; }
+
+.file-upload { margin: 10px 0; }
+.file-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.08); padding: 8px 16px; border-radius: 8px;
+  font-size: 13px; color: #5ee7b0; cursor: pointer; border: 1px dashed rgba(94,231,176,0.3);
+}
+.selected-files { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.file-tag { font-size: 11px; background: rgba(255,255,255,0.04); padding: 4px 8px; border-radius: 4px; color: rgba(255,255,255,0.6); }
+
+.action-btn-sm {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
+}
+.action-btn-sm--danger { color: #ff8080; border-color: rgba(255,128,128,0.2); }
+
+.post-avatar { width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
 </style>
