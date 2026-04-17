@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1776469067339" clover="3.2.0">
-  <project timestamp="1776469067339" name="All files">
-    <metrics statements="475" coveredstatements="89" conditionals="181" coveredconditionals="31" methods="142" coveredmethods="16" elements="798" coveredelements="136" complexity="0" loc="475" ncloc="475" packages="10" files="27" classes="27"/>
+<coverage generated="1776469492241" clover="3.2.0">
+  <project timestamp="1776469492241" name="All files">
+    <metrics statements="475" coveredstatements="115" conditionals="181" coveredconditionals="44" methods="142" coveredmethods="22" elements="798" coveredelements="181" complexity="0" loc="475" ncloc="475" packages="10" files="27" classes="27"/>
     <package name="apps.api.src">
       <metrics statements="44" coveredstatements="9" conditionals="11" coveredconditionals="3" methods="5" coveredmethods="3"/>
       <file name="api.controller.ts" path="/run/media/caedes/08b909b4-52c4-4c99-acd1-0e6e6a3ce2c0/local_code/hackathon/backend/apps/api/src/api.controller.ts">
@@ -121,7 +121,7 @@
       </file>
     </package>
     <package name="apps.api.src.calendar">
-      <metrics statements="54" coveredstatements="0" conditionals="24" coveredconditionals="0" methods="15" coveredmethods="0"/>
+      <metrics statements="54" coveredstatements="19" conditionals="24" coveredconditionals="10" methods="15" coveredmethods="3"/>
       <file name="calendar.controller.ts" path="/run/media/caedes/08b909b4-52c4-4c99-acd1-0e6e6a3ce2c0/local_code/hackathon/backend/apps/api/src/calendar/calendar.controller.ts">
         <metrics statements="15" coveredstatements="0" conditionals="4" coveredconditionals="0" methods="6" coveredmethods="0"/>
         <line num="1" count="0" type="stmt"/>
@@ -149,33 +149,33 @@
         <line num="11" count="0" type="stmt"/>
       </file>
       <file name="calendar.service.ts" path="/run/media/caedes/08b909b4-52c4-4c99-acd1-0e6e6a3ce2c0/local_code/hackathon/backend/apps/api/src/calendar/calendar.service.ts">
-        <metrics statements="34" coveredstatements="0" conditionals="20" coveredconditionals="0" methods="9" coveredmethods="0"/>
-        <line num="1" count="0" type="stmt"/>
-        <line num="2" count="0" type="stmt"/>
-        <line num="5" count="0" type="stmt"/>
-        <line num="6" count="0" type="cond" truecount="0" falsecount="4"/>
-        <line num="9" count="0" type="stmt"/>
-        <line num="19" count="0" type="cond" truecount="0" falsecount="2"/>
-        <line num="20" count="0" type="stmt"/>
-        <line num="23" count="0" type="cond" truecount="0" falsecount="2"/>
+        <metrics statements="34" coveredstatements="19" conditionals="20" coveredconditionals="10" methods="9" coveredmethods="3"/>
+        <line num="1" count="1" type="stmt"/>
+        <line num="2" count="1" type="stmt"/>
+        <line num="5" count="1" type="stmt"/>
+        <line num="6" count="4" type="cond" truecount="2" falsecount="2"/>
+        <line num="9" count="1" type="stmt"/>
+        <line num="19" count="1" type="cond" truecount="1" falsecount="1"/>
+        <line num="20" count="1" type="stmt"/>
+        <line num="23" count="1" type="cond" truecount="1" falsecount="1"/>
         <line num="24" count="0" type="stmt"/>
-        <line num="27" count="0" type="cond" truecount="0" falsecount="2"/>
+        <line num="27" count="1" type="cond" truecount="1" falsecount="1"/>
         <line num="28" count="0" type="stmt"/>
-        <line num="31" count="0" type="cond" truecount="0" falsecount="2"/>
+        <line num="31" count="1" type="cond" truecount="1" falsecount="1"/>
         <line num="32" count="0" type="stmt"/>
         <line num="33" count="0" type="stmt"/>
-        <line num="37" count="0" type="stmt"/>
-        <line num="40" count="0" type="cond" truecount="0" falsecount="2"/>
+        <line num="37" count="1" type="stmt"/>
+        <line num="40" count="1" type="cond" truecount="1" falsecount="1"/>
         <line num="41" count="0" type="stmt"/>
         <line num="44" count="0" type="stmt"/>
         <line num="45" count="0" type="stmt"/>
-        <line num="51" count="0" type="stmt"/>
-        <line num="55" count="0" type="stmt"/>
-        <line num="59" count="0" type="cond" truecount="0" falsecount="2"/>
-        <line num="60" count="0" type="stmt"/>
-        <line num="63" count="0" type="stmt"/>
-        <line num="65" count="0" type="stmt"/>
-        <line num="69" count="0" type="stmt"/>
+        <line num="51" count="1" type="stmt"/>
+        <line num="55" count="2" type="stmt"/>
+        <line num="59" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="60" count="1" type="stmt"/>
+        <line num="63" count="1" type="stmt"/>
+        <line num="65" count="1" type="stmt"/>
+        <line num="69" count="1" type="stmt"/>
         <line num="74" count="0" type="stmt"/>
         <line num="77" count="0" type="stmt"/>
         <line num="78" count="0" type="cond" truecount="0" falsecount="3"/>
@@ -370,7 +370,7 @@
       </file>
     </package>
     <package name="apps.cms.src">
-      <metrics statements="167" coveredstatements="32" conditionals="72" coveredconditionals="5" methods="52" coveredmethods="3"/>
+      <metrics statements="167" coveredstatements="39" conditionals="72" coveredconditionals="8" methods="52" coveredmethods="6"/>
       <file name="auth-gui.controller.ts" path="/run/media/caedes/08b909b4-52c4-4c99-acd1-0e6e6a3ce2c0/local_code/hackathon/backend/apps/cms/src/auth-gui.controller.ts">
         <metrics statements="24" coveredstatements="0" conditionals="26" coveredconditionals="0" methods="4" coveredmethods="0"/>
         <line num="1" count="0" type="stmt"/>
@@ -481,18 +481,18 @@
         <line num="21" count="0" type="stmt"/>
       </file>
       <file name="cms.service.ts" path="/run/media/caedes/08b909b4-52c4-4c99-acd1-0e6e6a3ce2c0/local_code/hackathon/backend/apps/cms/src/cms.service.ts">
-        <metrics statements="51" coveredstatements="5" conditionals="24" coveredconditionals="2" methods="22" coveredmethods="1"/>
-        <line num="1" count="1" type="stmt"/>
-        <line num="2" count="1" type="stmt"/>
-        <line num="3" count="1" type="stmt"/>
-        <line num="6" count="1" type="stmt"/>
-        <line num="7" count="1" type="cond" truecount="2" falsecount="2"/>
+        <metrics statements="51" coveredstatements="12" conditionals="24" coveredconditionals="5" methods="22" coveredmethods="4"/>
+        <line num="1" count="2" type="stmt"/>
+        <line num="2" count="2" type="stmt"/>
+        <line num="3" count="2" type="stmt"/>
+        <line num="6" count="2" type="stmt"/>
+        <line num="7" count="6" type="cond" truecount="2" falsecount="2"/>
         <line num="11" count="0" type="stmt"/>
         <line num="14" count="0" type="stmt"/>
-        <line num="18" count="0" type="stmt"/>
-        <line num="22" count="0" type="stmt"/>
-        <line num="23" count="0" type="cond" truecount="0" falsecount="2"/>
-        <line num="24" count="0" type="stmt"/>
+        <line num="18" count="1" type="stmt"/>
+        <line num="22" count="2" type="stmt"/>
+        <line num="23" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="24" count="1" type="stmt"/>
         <line num="29" count="0" type="stmt"/>
         <line num="32" count="0" type="stmt"/>
         <line num="36" count="0" type="stmt"/>
@@ -527,9 +527,9 @@
         <line num="139" count="0" type="cond" truecount="0" falsecount="2"/>
         <line num="140" count="0" type="stmt"/>
         <line num="145" count="0" type="stmt"/>
-        <line num="153" count="0" type="stmt"/>
-        <line num="157" count="0" type="cond" truecount="0" falsecount="2"/>
-        <line num="158" count="0" type="stmt"/>
+        <line num="153" count="1" type="stmt"/>
+        <line num="157" count="1" type="cond" truecount="1" falsecount="1"/>
+        <line num="158" count="1" type="stmt"/>
         <line num="162" count="0" type="stmt"/>
         <line num="163" count="0" type="cond" truecount="0" falsecount="2"/>
         <line num="164" count="0" type="stmt"/>
