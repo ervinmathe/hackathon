@@ -23,15 +23,19 @@ router.beforeEach((to, from) => {
   document.title = to.meta.title || "Invalid"
 
   const isAuthenticated = //localStorage.getItem('isAuthenticated') === 'true'
-  /*kivenni majd ezt*/true
-
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    return '/login';
-  } else if (to.path === '/' && isAuthenticated) {
-    return '/home'
-  } else {
-    return true;
+  true
+  // 1. If NOT logged in, only redirect if they aren't already going to the Login page
+  if (!isAuthenticated && to.path !== '/') {
+    return '/'
   }
+
+  // 2. If LOGGED in, only redirect to home if they are trying to access the Login page
+  if (isAuthenticated && to.path === '/') {
+    return '/home'
+  }
+
+  // 3. Otherwise, return nothing (or true) to let the navigation happen normally
+  return true
 })
 
 export default router 

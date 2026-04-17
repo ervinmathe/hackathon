@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader'
+const { Place } = await google.maps.importLibrary("places")
 
 // 1. Initialize variables
 const router = useRouter()
@@ -15,7 +16,7 @@ const places = ref([])
 
 
 setOptions({
-    apiKey: "YOUR_ACTUAL_API_KEY_HERE",
+    apiKey: "AIzaSyDuXiUzwNIlxXIlnO9Z-mJ51sdUV2lPC1Q",
     version: "weekly",
     libraries: ["places"]
 })
@@ -45,41 +46,50 @@ const getLocationAndSearch = () => {
 }
 
 const performGoogleSearch = async () => {
-    if (!userCoords.value) return
-    isLoading.value = true
+    if (!userCoords.value) return;
+    isLoading.value = true;
 
     try {
-        const { Place } = await importLibrary("places")
-        const { LatLng } = await importLibrary("core")
+        // 1. Import the NEW Place class and the search function
+        const { Place } = await importLibrary("places");
 
+        // 2. Define your search request
+        // The 'New' API uses 'textQuery' instead of 'keyword'
         const request = {
-            textQuery: searchQuery.value || 'gym',
-            fields: ['id', 'displayName', 'formattedAddress', 'rating', 'types', 'location'],
+            textQuery: searchQuery.value || 'gyms and parks',
             locationBias: {
-                center: new LatLng(userCoords.value.lat, userCoords.value.lng),
-                radius: 20000
+                center: { lat: userCoords.value.lat, lng: userCoords.value.lng },
+                radius: 5000 // 5km radius
             },
+            maxResultCount: 15,
+            // Field masking: Only ask for what you need to save money/quota
+            fields: ['id', 'displayName', 'formattedAddress', 'rating', 'types', 'location']
+        };
+
+        // 3. Execute the search
+        const { places: results } = await Place.searchByText(request);
+
+        if (results && results.length > 0) {
+            places.value = results.map(p => ({
+                id: p.id,
+                name: p.displayName, // New API uses displayName
+                address: p.formattedAddress,
+                rating: p.rating || 'N/A',
+                type: p.types ? p.types[0] : 'activity',
+                icon: '📍',
+                tags: p.types ? p.types.slice(0, 3) : [],
+                color: '#5ee7b0'
+            }));
+            locationError.value = null;
+        } else {
+            locationError.value = "No activities found in this area.";
         }
-
-        const { places: results } = await Place.searchByText(request)
-
-        places.value = results.map(place => ({
-            id: place.id,
-            name: place.displayName,
-            address: place.formattedAddress,
-            rating: place.rating || 0,
-            type: place.types?.[0] || 'place',
-            distance: 'Nearby',
-            icon: '📍',
-            tags: place.types?.slice(0, 3) || [],
-            color: '#5ee7b0'
-        }))
-
     } catch (err) {
-        console.error("Search failed:", err)
-        locationError.value = "Search failed."
+
+        console.error("New Places API Search failed:", err);
+        locationError.value = "API is warming up. Please try again in a few minutes.";
     } finally {
-        isLoading.value = false
+        isLoading.value = false;
     }
 }
 
