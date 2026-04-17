@@ -316,7 +316,7 @@ onBeforeUnmount(() => {
         </button>
         <div class="avatar"><span>{{ authStore.user?.username?.charAt(0).toUpperCase() || 'U' }}</span></div>
       </div>
-
+    </nav>
 
     <div class="layout">
       <!-- SIDEBAR -->
