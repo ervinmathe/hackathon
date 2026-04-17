@@ -6,15 +6,33 @@ import * as bcrypt from 'bcrypt';
 export class CmsService {
   constructor(@Inject('KNEX_CONNECTION') private readonly knex: Knex) {}
 
+  // --- Universities ---
+  async createUniversity(data: { name: string; description?: string }) {
+    const [university] = await this.knex('universities')
+      .insert(data)
+      .returning('*');
+    return university;
+  }
+
+  async getAllUniversities() {
+    return this.knex('universities').select('*').orderBy('name', 'asc');
+  }
+
+  async deleteUniversity(id: string) {
+    const deletedCount = await this.knex('universities').where({ id }).del();
+    if (deletedCount === 0) throw new NotFoundException('University not found');
+    return { success: true };
+  }
+
   // --- Enrollments (Szakok) ---
-  async createEnrollment(data: { name: string; description?: string }) {
+  async createEnrollment(data: { name: string; description?: string; university_id: string }) {
     const [enrollment] = await this.knex('enrollments')
       .insert(data)
       .returning('*');
     return enrollment;
   }
 
-  async updateEnrollment(id: string, data: { name?: string; description?: string }) {
+  async updateEnrollment(id: string, data: { name?: string; description?: string; university_id?: string }) {
     const [enrollment] = await this.knex('enrollments')
       .where({ id })
       .update({ ...data, updated_at: new Date() })
@@ -30,18 +48,21 @@ export class CmsService {
   }
 
   async getAllEnrollments() {
-    return this.knex('enrollments').select('*').orderBy('name', 'asc');
+    return this.knex('enrollments')
+      .join('universities', 'enrollments.university_id', 'universities.id')
+      .select('enrollments.*', 'universities.name as university_name')
+      .orderBy('enrollments.name', 'asc');
   }
 
   // --- Forums (Subjects) ---
-  async createForum(data: { name: string; description?: string; enrollment_id: string }) {
+  async createForum(data: { name: string; description?: string; enrollment_id: string; university_id: string }) {
     const [forum] = await this.knex('forums')
       .insert(data)
       .returning('*');
     return forum;
   }
 
-  async updateForum(id: string, data: { name?: string; description?: string; enrollment_id?: string }) {
+  async updateForum(id: string, data: { name?: string; description?: string; enrollment_id?: string; university_id?: string }) {
     const [forum] = await this.knex('forums')
       .where({ id })
       .update({ ...data, updated_at: new Date() })
@@ -57,11 +78,15 @@ export class CmsService {
   }
 
   async getAllForums() {
-    return this.knex('forums').select('*').orderBy('name', 'asc');
+    return this.knex('forums')
+      .join('universities', 'forums.university_id', 'universities.id')
+      .join('enrollments', 'forums.enrollment_id', 'enrollments.id')
+      .select('forums.*', 'universities.name as university_name', 'enrollments.name as enrollment_name')
+      .orderBy('forums.name', 'asc');
   }
 
   // --- Users Management ---
-  async createUser(data: { username: string; email: string; password: string; role: string; enrollment_id?: string; year?: number }) {
+  async createUser(data: { username: string; email: string; password: string; role: string; enrollment_id?: string; university_id: string; year?: number }) {
     const hashedPassword = await bcrypt.hash(data.password, 10);
     const [user] = await this.knex('users')
       .insert({
@@ -73,7 +98,10 @@ export class CmsService {
   }
 
   async getAllUsers() {
-    return this.knex('users').select('id', 'username', 'email', 'role', 'enrollment_id', 'year', 'created_at');
+    return this.knex('users')
+      .leftJoin('universities', 'users.university_id', 'universities.id')
+      .leftJoin('enrollments', 'users.enrollment_id', 'enrollments.id')
+      .select('users.id', 'users.username', 'users.email', 'users.role', 'users.year', 'users.created_at', 'universities.name as university_name', 'enrollments.name as enrollment_name');
   }
 
   async deleteUser(id: string) {

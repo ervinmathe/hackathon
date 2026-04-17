@@ -17,12 +17,14 @@ export class CmsGuiController {
       return res.redirect('/login');
     }
 
+    const universities = await this.cmsService.getAllUniversities();
     const enrollments = await this.cmsService.getAllEnrollments();
     const forums = await this.cmsService.getAllForums();
     const users = await this.cmsService.getAllUsers();
     const posts = await this.cmsService.getAllPosts();
 
     return res.render('dashboard', {
+      universities,
       enrollments,
       forums,
       users,

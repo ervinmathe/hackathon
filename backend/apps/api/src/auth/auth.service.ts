@@ -1,4 +1,4 @@
-import { Injectable, Inject, ConflictException } from '@nestjs/common';
+import { Injectable, Inject, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { Knex } from 'knex';
 import * as bcrypt from 'bcrypt';
 
@@ -6,12 +6,16 @@ import * as bcrypt from 'bcrypt';
 export class AuthService {
   constructor(@Inject('KNEX_CONNECTION') private readonly knex: Knex) {}
 
-  async getEnrollments() {
-    return this.knex('enrollments').select('*');
+  async getUniversities() {
+    return this.knex('universities').select('id', 'name', 'description');
+  }
+
+  async getEnrollmentsByUniversity(universityId: string) {
+    return this.knex('enrollments').where({ university_id: universityId }).select('id', 'name', 'description');
   }
 
   async register(data: any) {
-    const { username, email, password, enrollment_id, year } = data;
+    const { username, email, password, university_id, enrollment_id, year } = data;
 
     const existingUser = await this.knex('users')
       .where({ email })
@@ -29,11 +33,34 @@ export class AuthService {
         username,
         email,
         password: hashedPassword,
+        university_id,
         enrollment_id,
         year: parseInt(year, 10),
       })
-      .returning(['id', 'username', 'email', 'role']);
+      .returning(['id', 'username', 'email', 'role', 'university_id', 'enrollment_id']);
 
     return user;
+  }
+
+  async login(data: any) {
+    const { username, password } = data;
+    
+    const user = await this.knex('users').where({ username }).first();
+    
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // In a real app we would return a JWT here. For simplicity in this Hackathon:
+    return {
+      message: 'Login successful',
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        university_id: user.university_id,
+        enrollment_id: user.enrollment_id
+      }
+    };
   }
 }

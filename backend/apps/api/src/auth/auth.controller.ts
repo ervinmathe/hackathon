@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 
 @ApiTags('auth')
@@ -7,11 +7,19 @@ import { AuthService } from './auth.service';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Get('enrollments')
-  @ApiOperation({ summary: 'Get all selectable enrollments (majors)' })
-  @ApiResponse({ status: 200, description: 'Return all enrollments.' })
-  async getEnrollments() {
-    return this.authService.getEnrollments();
+  @Get('universities')
+  @ApiOperation({ summary: 'Get all selectable universities' })
+  @ApiResponse({ status: 200, description: 'Return all universities.' })
+  async getUniversities() {
+    return this.authService.getUniversities();
+  }
+
+  @Get('universities/:id/enrollments')
+  @ApiOperation({ summary: 'Get enrollments for a specific university' })
+  @ApiParam({ name: 'id', description: 'University ID' })
+  @ApiResponse({ status: 200, description: 'Return enrollments for the university.' })
+  async getEnrollmentsByUniversity(@Param('id') id: string) {
+    return this.authService.getEnrollmentsByUniversity(id);
   }
 
   @Post('register')
@@ -20,5 +28,13 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'Conflict: Username or email already exists.' })
   async register(@Body() registerDto: any) {
     return this.authService.register(registerDto);
+  }
+
+  @Post('login')
+  @ApiOperation({ summary: 'User login' })
+  @ApiResponse({ status: 200, description: 'User successfully logged in.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized: Invalid credentials.' })
+  async login(@Body() loginDto: any) {
+    return this.authService.login(loginDto);
   }
 }

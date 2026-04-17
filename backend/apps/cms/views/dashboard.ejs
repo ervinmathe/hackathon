@@ -21,13 +21,13 @@
         </ul>
     </nav>
     <main class="container">
-        
-        <!-- SZAKOK (Csak ADMIN) -->
+
+        <!-- EGYETEMEK (Csak ADMIN) -->
         <% if (userRole === 'ADMIN') { %>
         <section class="section">
             <div class="grid">
                 <div>
-                    <h3>Szakok</h3>
+                    <h3>Egyetemek</h3>
                     <table>
                         <thead>
                             <tr>
@@ -36,9 +36,44 @@
                             </tr>
                         </thead>
                         <tbody>
+                            <% universities.forEach(u => { %>
+                                <tr>
+                                    <td><%= u.name %></td>
+                                    <td><button class="outline contrast" onclick="deleteItem('universities', '<%= u.id %>')">Törlés</button></td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <div>
+                    <h3>Új egyetem hozzáadása</h3>
+                    <form onsubmit="handleCreate(event, 'universities')">
+                        <input type="text" name="name" placeholder="Egyetem neve" required>
+                        <textarea name="description" placeholder="Leírás"></textarea>
+                        <button type="submit">Hozzáadás</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- SZAKOK (Csak ADMIN) -->
+        <section class="section">
+            <div class="grid">
+                <div>
+                    <h3>Szakok</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Név</th>
+                                <th>Egyetem</th>
+                                <th>Művelet</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                             <% enrollments.forEach(e => { %>
                                 <tr>
                                     <td><%= e.name %></td>
+                                    <td><%= e.university_name %></td>
                                     <td><button class="outline contrast" onclick="deleteItem('enrollments', '<%= e.id %>')">Törlés</button></td>
                                 </tr>
                             <% }) %>
@@ -49,6 +84,12 @@
                     <h3>Új szak hozzáadása</h3>
                     <form onsubmit="handleCreate(event, 'enrollments')">
                         <input type="text" name="name" placeholder="Szak neve" required>
+                        <select name="university_id" required>
+                            <option value="" disabled selected>Válassz egyetemet...</option>
+                            <% universities.forEach(u => { %>
+                                <option value="<%= u.id %>"><%= u.name %></option>
+                            <% }) %>
+                        </select>
                         <textarea name="description" placeholder="Leírás"></textarea>
                         <button type="submit">Hozzáadás</button>
                     </form>
@@ -66,17 +107,17 @@
                         <thead>
                             <tr>
                                 <th>Név</th>
+                                <th>Egyetem</th>
                                 <th>Szak</th>
                                 <th>Művelet</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <% forums.forEach(f => { 
-                                const enrollment = enrollments.find(e => e.id === f.enrollment_id);
-                            %>
+                            <% forums.forEach(f => { %>
                                 <tr>
                                     <td><%= f.name %></td>
-                                    <td><%= enrollment ? enrollment.name : 'Ismeretlen' %></td>
+                                    <td><%= f.university_name %></td>
+                                    <td><%= f.enrollment_name ? f.enrollment_name : 'Minden szak' %></td>
                                     <td><button class="outline contrast" onclick="deleteItem('forums', '<%= f.id %>')">Törlés</button></td>
                                 </tr>
                             <% }) %>
@@ -87,6 +128,12 @@
                     <h3>Új tantárgy hozzáadása</h3>
                     <form onsubmit="handleCreate(event, 'forums')">
                         <input type="text" name="name" placeholder="Tantárgy neve" required>
+                        <select name="university_id" required>
+                            <option value="" disabled selected>Válassz egyetemet...</option>
+                            <% universities.forEach(u => { %>
+                                <option value="<%= u.id %>"><%= u.name %></option>
+                            <% }) %>
+                        </select>
                         <select name="enrollment_id" required>
                             <option value="" disabled selected>Válassz szakot...</option>
                             <% enrollments.forEach(e => { %>
@@ -111,6 +158,7 @@
                             <tr>
                                 <th>Név</th>
                                 <th>Szerepkör</th>
+                                <th>Egyetem / Szak</th>
                                 <th>Művelet</th>
                             </tr>
                         </thead>
@@ -119,6 +167,7 @@
                                 <tr>
                                     <td><%= u.username %> (<%= u.email %>)</td>
                                     <td><span class="badge"><%= u.role %></span></td>
+                                    <td><%= u.university_name %> / <%= u.enrollment_name || '-' %></td>
                                     <td><button class="outline contrast" onclick="deleteItem('users', '<%= u.id %>')">Törlés</button></td>
                                 </tr>
                             <% }) %>
@@ -135,6 +184,12 @@
                             <option value="LESSADMIN">LESSADMIN (Fórum kezelő)</option>
                             <option value="ADMIN">ADMIN (Teljes jogú)</option>
                             <option value="USER">USER (Hallgató)</option>
+                        </select>
+                        <select name="university_id" required>
+                            <option value="" disabled selected>Válassz egyetemet...</option>
+                            <% universities.forEach(u => { %>
+                                <option value="<%= u.id %>"><%= u.name %></option>
+                            <% }) %>
                         </select>
                         <button type="submit">Létrehozás</button>
                     </form>

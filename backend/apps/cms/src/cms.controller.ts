@@ -1,11 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CmsService } from './cms.service';
 
 @ApiTags('admin')
 @Controller('admin')
 export class CmsController {
   constructor(private readonly cmsService: CmsService) {}
+
+  // --- Universities ---
+  @Get('universities')
+  @ApiOperation({ summary: 'Admin: List all universities' })
+  async getAllUniversities() {
+    return this.cmsService.getAllUniversities();
+  }
+
+  @Post('universities')
+  @ApiOperation({ summary: 'Admin: Create a new university' })
+  async createUniversity(@Body() data: { name: string; description?: string }) {
+    return this.cmsService.createUniversity(data);
+  }
+
+  @Delete('universities/:id')
+  @ApiOperation({ summary: 'Admin: Delete a university' })
+  async deleteUniversity(@Param('id') id: string) {
+    return this.cmsService.deleteUniversity(id);
+  }
 
   // --- Enrollments (Szakok) ---
   @Get('enrollments')
@@ -16,13 +35,13 @@ export class CmsController {
 
   @Post('enrollments')
   @ApiOperation({ summary: 'Admin: Create a new enrollment' })
-  async createEnrollment(@Body() data: { name: string; description?: string }) {
+  async createEnrollment(@Body() data: { name: string; description?: string; university_id: string }) {
     return this.cmsService.createEnrollment(data);
   }
 
   @Patch('enrollments/:id')
   @ApiOperation({ summary: 'Admin: Update an enrollment' })
-  async updateEnrollment(@Param('id') id: string, @Body() data: { name?: string; description?: string }) {
+  async updateEnrollment(@Param('id') id: string, @Body() data: { name?: string; description?: string; university_id?: string }) {
     return this.cmsService.updateEnrollment(id, data);
   }
 
@@ -40,14 +59,14 @@ export class CmsController {
   }
 
   @Post('forums')
-  @ApiOperation({ summary: 'Admin: Create a new forum for a subject' })
-  async createForum(@Body() data: { name: string; description?: string; enrollment_id: string }) {
+  @ApiOperation({ summary: 'Admin: Create a new forum' })
+  async createForum(@Body() data: { name: string; description?: string; enrollment_id: string; university_id: string }) {
     return this.cmsService.createForum(data);
   }
 
   @Patch('forums/:id')
   @ApiOperation({ summary: 'Admin: Update a forum' })
-  async updateForum(@Param('id') id: string, @Body() data: { name?: string; description?: string; enrollment_id?: string }) {
+  async updateForum(@Param('id') id: string, @Body() data: { name?: string; description?: string; enrollment_id?: string; university_id?: string }) {
     return this.cmsService.updateForum(id, data);
   }
 
@@ -66,7 +85,7 @@ export class CmsController {
 
   @Post('users')
   @ApiOperation({ summary: 'Admin: Create a new user (e.g. LESSADMIN)' })
-  async createUser(@Body() data: { username: string; email: string; password: string; role: string; enrollment_id?: string; year?: number }) {
+  async createUser(@Body() data: { username: string; email: string; password: string; role: string; enrollment_id?: string; university_id: string; year?: number }) {
     return this.cmsService.createUser(data);
   }
 
@@ -76,9 +95,9 @@ export class CmsController {
     return this.cmsService.deleteUser(id);
   }
 
-  // --- Posts ---
+  // --- Content Moderation ---
   @Get('posts')
-  @ApiOperation({ summary: 'Admin: List all posts' })
+  @ApiOperation({ summary: 'Admin: List all posts for moderation' })
   async getAllPosts() {
     return this.cmsService.getAllPosts();
   }

@@ -5,8 +5,11 @@ import { Knex } from 'knex';
 export class ForumsService {
   constructor(@Inject('KNEX_CONNECTION') private readonly knex: Knex) {}
 
-  async findAll(enrollmentId?: string) {
+  async findAll(universityId?: string, enrollmentId?: string) {
     const query = this.knex('forums').select('*');
+    if (universityId) {
+      query.where({ university_id: universityId });
+    }
     if (enrollmentId) {
       query.where({ enrollment_id: enrollmentId });
     }

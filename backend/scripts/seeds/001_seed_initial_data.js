@@ -12,37 +12,45 @@ exports.seed = async function(knex) {
   await knex('forums').del();
   await knex('users').del();
   await knex('enrollments').del();
+  await knex('universities').del();
 
-  // 1. Szakok felvitele (Enrollments)
+  // 1. Egyetemek felvitele (Universities)
+  const universities = await knex('universities').insert([
+    { name: 'SAPIENTIA EMTE', description: 'Sapientia Erdélyi Magyar Tudományegyetem' }
+  ]).returning('id');
+
+  const sapientiaId = universities[0].id;
+
+  // 2. Szakok felvitele (Enrollments)
   const enrollments = await knex('enrollments').insert([
-    { name: 'Mérnökinformatikus BSc', description: 'Hardver és szoftver fejlesztés.' },
-    { name: 'Gazdaságinformatikus BSc', description: 'Informatika az üzleti folyamatokban.' }
+    { name: 'Mérnökinformatikus BSc', description: 'Hardver és szoftver fejlesztés.', university_id: sapientiaId },
+    { name: 'Gazdaságinformatikus BSc', description: 'Informatika az üzleti folyamatokban.', university_id: sapientiaId }
   ]).returning('id');
 
   const mernokId = enrollments[0].id;
   const gazdasagId = enrollments[1].id;
 
-  // 2. Felhasználók felvitele (Users)
+  // 3. Felhasználók felvitele (Users)
   const passwordHash = await bcrypt.hash('secret', 10);
   const users = await knex('users').insert([
-    { username: 'admin', email: 'admin@test.com', password: passwordHash, role: 'ADMIN', enrollment_id: null, year: null },
-    { username: 'student_1', email: 'student1@test.com', password: passwordHash, role: 'USER', enrollment_id: mernokId, year: 2 },
-    { username: 'student_2', email: 'student2@test.com', password: passwordHash, role: 'USER', enrollment_id: gazdasagId, year: 1 }
+    { username: 'admin', email: 'admin@test.com', password: passwordHash, role: 'ADMIN', enrollment_id: null, university_id: sapientiaId, year: null },
+    { username: 'student_1', email: 'student1@test.com', password: passwordHash, role: 'USER', enrollment_id: mernokId, university_id: sapientiaId, year: 2 },
+    { username: 'student_2', email: 'student2@test.com', password: passwordHash, role: 'USER', enrollment_id: gazdasagId, university_id: sapientiaId, year: 1 }
   ]).returning('id');
 
   const adminId = users[0].id;
   const student1Id = users[1].id;
 
-  // 3. Tantárgyak / Fórumok felvitele
+  // 4. Tantárgyak / Fórumok felvitele
   const forums = await knex('forums').insert([
-    { name: 'Programozás Alapjai I', description: 'C és C++ alapok', enrollment_id: mernokId },
-    { name: 'Adatbázisok', description: 'SQL és NoSQL alapok', enrollment_id: mernokId },
-    { name: 'Vállalati gazdaságtan', description: 'Alapvető közgazdaságtan', enrollment_id: gazdasagId }
+    { name: 'Programozás Alapjai I', description: 'C és C++ alapok', enrollment_id: mernokId, university_id: sapientiaId },
+    { name: 'Adatbázisok', description: 'SQL és NoSQL alapok', enrollment_id: mernokId, university_id: sapientiaId },
+    { name: 'Vállalati gazdaságtan', description: 'Alapvető közgazdaságtan', enrollment_id: gazdasagId, university_id: sapientiaId }
   ]).returning('id');
 
   const prog1Id = forums[0].id;
 
-  // 4. Posztok felvitele (Posts)
+  // 5. Posztok felvitele (Posts)
   const posts = await knex('posts').insert([
     { 
       forum_id: prog1Id, 
@@ -62,7 +70,7 @@ exports.seed = async function(knex) {
 
   const cheatSheetPostId = posts[0].id;
 
-  // 4.1. Mellékletek felvitele (Post Attachments)
+  // 6. Mellékletek felvitele (Post Attachments)
   await knex('post_attachments').insert([
     {
       post_id: cheatSheetPostId,
@@ -78,7 +86,7 @@ exports.seed = async function(knex) {
     }
   ]);
 
-  // 5. Naptár események (Calendar Events)
+  // 7. Naptár események (Calendar Events)
   const now = new Date();
   const tomorrow = new Date(now);
   tomorrow.setDate(now.getDate() + 1);
