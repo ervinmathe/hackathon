@@ -11,11 +11,19 @@ export class CalendarController {
   @ApiOperation({ summary: 'Get approved calendar events' })
   @ApiQuery({ name: 'universityId', required: false })
   @ApiQuery({ name: 'enrollmentId', required: false })
+  @ApiQuery({ name: 'userId', required: false })
   async findAll(
     @Query('universityId') universityId?: string,
     @Query('enrollmentId') enrollmentId?: string,
+    @Query('userId') userId?: string,
   ) {
-    return this.calendarService.findAll(universityId, enrollmentId, true);
+    return this.calendarService.findAll(universityId, enrollmentId, true, userId);
+  }
+
+  @Post(':id/interest')
+  @ApiOperation({ summary: 'Toggle interest for an event' })
+  async toggleInterest(@Param('id') eventId: string, @Body('userId') userId: string) {
+    return this.calendarService.toggleInterest(userId, eventId);
   }
 
   @Post()

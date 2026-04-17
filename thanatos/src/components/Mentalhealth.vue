@@ -12,15 +12,118 @@ const showSearch = ref(false)
 
 const allChannels = ref([])
 const events = ref([])
-const myChannels = ref([])
 const activeChannel = ref(null)
 const posts = ref([])
 const selectedPost = ref(null)
 const showPostModal = ref(false)
 const showCreateModal = ref(false)
+const showCreateEventModal = ref(false)
 const showEditModal = ref(false)
 const editingPost = ref({ title: '', description: '', content: '' })
 const isSubmitting = ref(false)
+
+// New post form
+const newPost = ref({
+  title: '',
+  description: '',
+  content: ''
+})
+
+// New event form
+const newEvent = ref({
+  title: '',
+  description: '',
+  location: '',
+  start_date: '',
+  start_time: '',
+  end_date: '',
+  end_time: ''
+})
+
+const selectedFiles = ref([])
+
+const handleFileSelect = (e) => {
+  const files = Array.from(e.target.files)
+  selectedFiles.value = [...selectedFiles.value, ...files]
+}
+
+const removeFile = (index) => {
+  selectedFiles.value.splice(index, 1)
+}
+
+const fetchMyChannels = async () => {
+  try {
+    const userId = authStore.user?.id
+    if (!userId) return
+    const allRes = await api.get('/forums')
+    const myRes = await api.get(`/forums/my/${userId}`)
+    const myForumIds = myRes.data.map(f => f.id)
+    allChannels.value = allRes.data.map(ch => ({
+      ...ch,
+      icon: '🌿',
+      color: '#5ee7b0',
+      joined: myForumIds.includes(ch.id)
+    }))
+  } catch (err) {
+    console.error('Failed to fetch forums', err)
+  }
+}
+
+const fetchEvents = async () => {
+  try {
+    const userId = authStore.user?.id
+    const res = await api.get('/calendar', {
+      params: { userId: userId }
+    })
+    events.value = res.data.map(e => ({ ...e, icon: '📅' }))
+  } catch (err) {
+    console.error('Failed to fetch events', err)
+  }
+}
+
+const toggleInterest = async (event) => {
+  try {
+    const userId = authStore.user?.id
+    if (!userId) return
+    // Explicit object with userId key
+    await api.post(`/calendar/${event.id}/interest`, { userId: userId })
+    fetchEvents()
+  } catch (err) {
+    console.error('Failed to toggle interest', err)
+  }
+}
+
+const fetchPosts = async (forumId) => {
+  try {
+    const res = await api.get(`/forums/${forumId}/posts`)
+    posts.value = res.data
+  } catch (err) {
+    console.error('Failed to fetch posts', err)
+  }
+}
+
+const selectChannel = (channel) => {
+  activeChannel.value = channel
+  fetchPosts(channel.id)
+}
+
+const toggleJoin = async (channel) => {
+  try {
+    const userId = authStore.user?.id
+    if (!userId) return
+    if (channel.joined) {
+      await api.delete(`/forums/${channel.id}/leave?userId=${userId}`)
+      channel.joined = false
+    } else {
+      await api.post(`/forums/${channel.id}/join`, { userId })
+      channel.joined = true
+      activeChannel.value = channel
+      fetchPosts(channel.id)
+    }
+  } catch (err) {
+    console.error('Failed to toggle join', err)
+  }
+}
 
 const openPost = async (post) => {
   try {
@@ -32,10 +135,60 @@ const openPost = async (post) => {
   }
 }
 
+const submitPost = async () => {
+  if (!newPost.value.title.trim() || !newPost.value.content.trim()) {
+    alert('Title and Content are required!')
+    return
+  }
+  if (isSubmitting.value) return
+  isSubmitting.value = true
+  try {
+    const userId = authStore.user?.id
+    if (!userId || !activeChannel.value) { isSubmitting.value = false; return; }
+    const formData = new FormData()
+    formData.append('title', newPost.value.title)
+    formData.append('description', newPost.value.description)
+    formData.append('content', newPost.value.content)
+    formData.append('forum_id', activeChannel.value.id)
+    formData.append('author_id', userId)
+    selectedFiles.value.forEach(file => { formData.append('attachments', file) })
+    await api.post('/posts', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+    showCreateModal.value = false
+    newPost.value = { title: '', description: '', content: '' }
+    selectedFiles.value = []
+    fetchPosts(activeChannel.value.id)
+  } catch (err) {
+    console.error('Failed to create post', err)
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+const submitEdit = async () => {
+  if (!editingPost.value.title.trim() || !editingPost.value.content.trim()) {
+    alert('Title and Content are required!')
+    return
+  }
+  if (isSubmitting.value) return
+  isSubmitting.value = true
+  try {
+    await api.patch(`/posts/${editingPost.value.id}`, editingPost.value)
+    showEditModal.value = false
+    if (activeChannel.value) fetchPosts(activeChannel.value.id)
+    if (showPostModal.value) {
+      const res = await api.get(`/posts/${editingPost.value.id}`)
+      selectedPost.value = res.data
+    }
+  } catch (err) {
+    console.error('Failed to update post', err)
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
 const deletePost = async (post, e) => {
   if (e) e.stopPropagation()
   if (!confirm('Are you sure you want to delete this post?')) return
-
   try {
     await api.delete(`/posts/${post.id}`)
     if (activeChannel.value) fetchPosts(activeChannel.value.id)
@@ -51,54 +204,21 @@ const openEditModal = (post, e) => {
   showEditModal.value = true
 }
 
-const submitEdit = async () => {
-  if (!editingPost.value.title.trim() || !editingPost.value.content.trim()) {
-    alert('Title and Content are required!')
+const submitEvent = async () => {
+  if (!newEvent.value.title.trim() || !newEvent.value.start_date || !newEvent.value.start_time) {
+    alert('Title, Start Date and Start Time are required!')
     return
   }
 
-  if (isSubmitting.value) return
-  isSubmitting.value = true
+  // Combine date and time
+  const startFull = `${newEvent.value.start_date}T${newEvent.value.start_time}`
+  const endFull = (newEvent.value.end_date && newEvent.value.end_time) 
+    ? `${newEvent.value.end_date}T${newEvent.value.end_time}` 
+    : null
 
-  try {
-    await api.patch(`/posts/${editingPost.value.id}`, editingPost.value)
-    showEditModal.value = false
-    if (activeChannel.value) fetchPosts(activeChannel.value.id)
-    if (showPostModal.value) {
-      // Refresh the detailed view
-      const res = await api.get(`/posts/${editingPost.value.id}`)
-      selectedPost.value = res.data
-    }
-  } catch (err) {
-    console.error('Failed to update post', err)
-  } finally {
-    isSubmitting.value = false
-  }
-}
-const fileInput = ref(null)
-const selectedFiles = ref([])
-
-// New post form
-const newPost = ref({
-  title: '',
-  description: '',
-  content: ''
-})
-
-const handleFileSelect = (e) => {
-  const files = Array.from(e.target.files)
-  // Add new files to existing selection
-  selectedFiles.value = [...selectedFiles.value, ...files]
-}
-
-const removeFile = (index) => {
-  selectedFiles.value.splice(index, 1)
-}
-
-const submitPost = async () => {
-  // Validation: No empty posts
-  if (!newPost.value.title.trim() || !newPost.value.content.trim()) {
-    alert('Title and Content are required!')
+  // Interval validation
+  if (endFull && new Date(endFull) <= new Date(startFull)) {
+    alert('End time must be after start time!')
     return
   }
 
@@ -107,110 +227,43 @@ const submitPost = async () => {
 
   try {
     const userId = authStore.user?.id
-    if (!userId || !activeChannel.value) {
-      isSubmitting.value = false
-      return
-    }
+    if (!userId) { isSubmitting.value = false; return; }
 
-    const formData = new FormData()
-    formData.append('title', newPost.value.title)
-    formData.append('description', newPost.value.description)
-    formData.append('content', newPost.value.content)
-    formData.append('forum_id', activeChannel.value.id)
-    formData.append('author_id', userId)
-    
-    selectedFiles.value.forEach(file => {
-      formData.append('attachments', file)
+    await api.post('/calendar', {
+      title: newEvent.value.title,
+      description: newEvent.value.description,
+      location: newEvent.value.location,
+      start_time: startFull,
+      end_time: endFull,
+      created_by: userId,
+      university_id: authStore.user.university_id,
+      enrollment_id: authStore.user.enrollment_id
     })
-
-    await api.post('/posts', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-
-    showCreateModal.value = false
-    newPost.value = { title: '', description: '', content: '' }
-    selectedFiles.value = []
-    fetchPosts(activeChannel.value.id)
+    showCreateEventModal.value = false
+    newEvent.value = { title: '', description: '', location: '', start_date: '', start_time: '', end_date: '', end_time: '' }
+    fetchEvents()
+    alert('Event submitted for approval!')
   } catch (err) {
-    console.error('Failed to create post', err)
+    console.error('Failed to create event', err)
   } finally {
     isSubmitting.value = false
   }
 }
 
 const togglePin = async (post, e) => {
-  e.stopPropagation() // Prevent opening the post modal
+  e.stopPropagation()
   try {
     await api.patch(`/posts/${post.id}/pin`)
-    if (activeChannel.value) {
-      fetchPosts(activeChannel.value.id)
-    }
+    if (activeChannel.value) fetchPosts(activeChannel.value.id)
   } catch (err) {
     console.error('Failed to toggle pin', err)
   }
 }
 
-const canPin = computed(() => {
-  return ['ADMIN', 'LESSADMIN'].includes(authStore.user?.role)
-})
-
+const canPin = computed(() => ['ADMIN', 'LESSADMIN'].includes(authStore.user?.role))
 const canManagePost = (post) => {
   if (!authStore.user) return false
   return authStore.user.id === post.author_id || ['ADMIN', 'LESSADMIN'].includes(authStore.user.role)
-}
-
-const fetchMyChannels = async () => {
-  try {
-    const userId = authStore.user?.id
-    if (!userId) return
-
-    // 1. Fetch ALL available forums for discovery
-    const allRes = await api.get('/forums')
-    
-    // 2. Fetch specific forums for THIS user
-    const myRes = await api.get(`/forums/my/${userId}`)
-    const myForumIds = myRes.data.map(f => f.id)
-
-    allChannels.value = allRes.data.map(ch => ({
-      ...ch,
-      icon: '🌿', // Placeholder icon
-      color: '#5ee7b0', // Placeholder color
-      joined: myForumIds.includes(ch.id)
-    }))
-  } catch (err) {
-    console.error('Failed to fetch forums', err)
-  }
-}
-
-const fetchEvents = async () => {
-  try {
-    const res = await api.get('/calendar')
-    events.value = res.data.map(e => ({
-      ...e,
-      icon: '📅'
-    }))
-  } catch (err) {
-    console.error('Failed to fetch events', err)
-  }
-}
-
-const fetchPosts = async (forumId) => {
-  try {
-    const res = await api.get(`/forums/${forumId}/posts`)
-    posts.value = res.data
-  } catch (err) {
-    console.error('Failed to fetch posts', err)
-  }
-}
-
-onMounted(() => {
-  fetchMyChannels()
-  fetchEvents()
-})
-
-const selectChannel = (channel) => {
-  activeChannel.value = channel
-  fetchPosts(channel.id)
 }
 
 const searchResults = computed(() => {
@@ -221,32 +274,14 @@ const searchResults = computed(() => {
   )
 })
 
-const toggleJoin = async (channel) => {
-  try {
-    const userId = authStore.user?.id
-    if (!userId) return
-
-    if (channel.joined) {
-      // Logic for leaving
-      await api.delete(`/forums/${channel.id}/leave?userId=${userId}`)
-      channel.joined = false
-      // If we are currently viewing this channel, we should stay but we are no longer joined
-    } else {
-      await api.post(`/forums/${channel.id}/join`, { userId })
-      channel.joined = true
-      activeChannel.value = channel
-      fetchPosts(channel.id)
-    }
-  } catch (err) {
-    console.error('Failed to toggle join', err)
-  }
-}
+onMounted(() => {
+  fetchMyChannels()
+  fetchEvents()
+})
 </script>
 
 <template>
   <div class="page">
-    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
-
     <!-- NAVBAR -->
     <nav class="navbar">
       <button class="back-btn" @click="router.replace('/home')">
@@ -260,14 +295,13 @@ const toggleJoin = async (channel) => {
         <span class="brand-sub">Mental Health</span>
       </div>
       <div class="navbar__right">
+        <div class="role-badge" v-if="authStore.user">{{ authStore.user.role }}</div>
         <div class="avatar"><span>{{ authStore.user?.username?.charAt(0).toUpperCase() || 'U' }}</span></div>
       </div>
     </nav>
 
-    <!-- MAIN LAYOUT -->
     <div class="layout">
-
-      <!-- LEFT SIDEBAR -->
+      <!-- SIDEBAR -->
       <aside class="sidebar">
         <div class="sidebar__tabs">
           <button :class="['tab', { 'tab--active': activeTab === 'forums' }]" @click="activeTab = 'forums'">
@@ -280,233 +314,177 @@ const toggleJoin = async (channel) => {
           </button>
         </div>
 
-        <!-- FORUMS SIDEBAR -->
         <template v-if="activeTab === 'forums'">
-          <div class="sidebar__section-label">Explore Channels</div>
+          <div class="sidebar__section-label">Discover Channels</div>
           <div class="channel-list">
-            <div
-              v-for="ch in allChannels" :key="ch.id"
-              :class="['channel-item', { 'channel-item--active': activeChannel?.id === ch.id }]"
-              @click="selectChannel(ch)"
-            >
-              <span class="ch-icon" :style="{ background: ch.color + '18', borderColor: ch.color + '40' }">{{ ch.icon }}</span>
+            <div v-for="ch in allChannels" :key="ch.id"
+                 :class="['channel-item', { 'channel-item--active': activeChannel?.id === ch.id }]"
+                 @click="selectChannel(ch)">
+              <span class="ch-icon" :style="{ background: ch.color + '18', borderColor: ch.color + '30' }">{{ ch.icon }}</span>
               <div class="ch-info">
                 <span class="ch-name">{{ ch.name }}</span>
+                <span class="ch-status" v-if="ch.joined">Joined</span>
               </div>
-              <div class="ch-active-dot" v-if="activeChannel?.id === ch.id"></div>
             </div>
-            <div v-if="allChannels.length === 0" class="ch-empty">No channels found.</div>
           </div>
-
-          <!-- ADD CHANNEL -->
           <div class="add-channel">
             <button class="add-btn" @click="showSearch = !showSearch">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              Find channels
+              Search All
             </button>
-            <Transition name="fade-slide">
-              <div v-if="showSearch" class="search-box">
-                <input
-                  v-model="searchQuery"
-                  placeholder="Search channels…"
-                  class="search-input"
-                  autofocus
-                />
-                <div class="search-results">
-                  <div v-if="!searchQuery" class="search-hint">Type to search all channels</div>
-                  <div v-else-if="searchResults.length === 0" class="search-hint">No results found</div>
-                  <div
-                    v-for="ch in searchResults" :key="ch.id"
-                    class="search-result-item"
-                    @click="selectChannel(ch)"
-                  >
-                    <span class="ch-icon ch-icon--sm" :style="{ background: ch.color + '18' }">{{ ch.icon }}</span>
-                    <div class="ch-info">
-                      <span class="ch-name">{{ ch.name }}</span>
-                    </div>
-                    <button
-                      :class="['join-btn', { 'join-btn--leave': ch.joined }]"
-                      @click.stop="toggleJoin(ch)"
-                    >{{ ch.joined ? 'Joined' : '+ Join' }}</button>
-                  </div>
-                </div>
-              </div>
-            </Transition>
+            <div v-if="showSearch" class="search-box">
+              <input v-model="searchQuery" placeholder="Filter..." class="search-input" />
+            </div>
           </div>
         </template>
-
-        <!-- EVENTS SIDEBAR -->
         <template v-else>
-          <div class="sidebar__section-label">Upcoming</div>
+          <div class="sidebar__section-label">Events</div>
           <div class="event-types">
-            <span class="event-tag event-tag--active">All</span>
-            <span class="event-tag">Live</span>
-            <span class="event-tag">Webinar</span>
-            <span class="event-tag">Workshop</span>
+            <span class="event-tag event-tag--active">All Sessions</span>
           </div>
         </template>
       </aside>
 
-      <!-- MAIN CONTENT -->
+      <!-- CONTENT -->
       <main class="content">
-
-        <!-- FORUMS CONTENT -->
         <template v-if="activeTab === 'forums'">
           <div v-if="!activeChannel" class="empty-state">
-            <span class="empty-icon">💬</span>
-            <h3>Select a channel to begin</h3>
-            <p>Join channels from the sidebar to see posts here.</p>
+            <span class="empty-icon">🌿</span>
+            <h3>Select a channel</h3>
+            <p>Choose a topic from the sidebar to join the conversation.</p>
           </div>
           <template v-else>
             <div class="content__header">
               <div class="content__header-left">
-                <span class="ch-icon ch-icon--lg" :style="{ background: activeChannel.color + '18', borderColor: activeChannel.color + '30' }">{{ activeChannel.icon }}</span>
+                <span class="ch-icon ch-icon--lg" :style="{ background: activeChannel.color + '18' }">{{ activeChannel.icon }}</span>
                 <div>
                   <h2 class="content__title">{{ activeChannel.name }}</h2>
-                  <p class="content__sub">{{ activeChannel.description || 'Welcome to the community' }}</p>
+                  <p class="content__sub">{{ activeChannel.description || 'Community discussion' }}</p>
                 </div>
               </div>
-              <button class="leave-btn" @click="toggleJoin(activeChannel)">{{ activeChannel.joined ? 'Joined' : 'Join' }}</button>
+              <button class="join-btn" :class="{ 'join-btn--leave': activeChannel.joined }" @click="toggleJoin(activeChannel)">
+                {{ activeChannel.joined ? 'Joined' : 'Join' }}
+              </button>
             </div>
 
-            <!-- POST COMPOSER -->
-            <div v-if="activeChannel.joined" class="composer" @click="showCreateModal = true" style="cursor: pointer;">
-              <span class="composer-avatar">{{ authStore.user?.username?.charAt(0).toUpperCase() }}</span>
+            <!-- COMPOSER -->
+            <div v-if="activeChannel.joined" class="composer" @click="showCreateModal = true">
+              <div class="composer-avatar">{{ authStore.user?.username?.charAt(0) }}</div>
               <div class="composer-input">Write something to the community…</div>
               <button class="composer-btn">Post</button>
             </div>
 
-            <!-- POSTS -->
-            <div class="posts">
-              <div v-for="post in posts" :key="post.id" class="post" 
-                   :style="post.is_pinned ? 'border-left: 4px solid #5ee7b0; background: rgba(94, 231, 176, 0.03);' : ''"
-                   @click="openPost(post)" style="cursor: pointer;">
-                <div class="post-avatar"><span>{{ post.author_name?.charAt(0).toUpperCase() }}</span></div>
-                <div class="post-body">
-                  <div class="post-meta">
-                    <span v-if="post.is_pinned" style="font-size: 10px; font-weight: bold; color: #5ee7b0; margin-right: 8px;">📌 PINNED</span>
-                    <span class="post-user">{{ post.author_name || 'Anonymous' }}</span>
-                    <span class="post-time">{{ new Date(post.created_at).toLocaleDateString() }}</span>
-                    
-                    <button v-if="canPin" class="pin-btn" @click.stop="togglePin(post, $event)" 
-                            style="margin-left: auto; background: none; border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 4px; cursor: pointer;">
+            <!-- POST FEED -->
+            <div class="posts-feed">
+              <div v-for="post in posts" :key="post.id" class="post-card" 
+                   :class="{ 'post-card--pinned': post.is_pinned }" @click="openPost(post)">
+                <div class="post-card__head">
+                  <div class="post-user">
+                    <div class="post-avatar"><span>{{ post.author_name?.charAt(0) }}</span></div>
+                    <div>
+                      <div class="post-author">{{ post.author_name }}</div>
+                      <div class="post-time">{{ new Date(post.created_at).toLocaleDateString() }}</div>
+                    </div>
+                  </div>
+                  <div class="post-badges">
+                    <span v-if="post.is_pinned" class="pinned-badge">📌 PINNED</span>
+                    <button v-if="canPin" class="pin-action-btn" @click.stop="togglePin(post, $event)">
                       {{ post.is_pinned ? 'Unpin' : 'Pin' }}
                     </button>
                   </div>
-                  <h4 style="margin: 4px 0; font-family: 'Sora', sans-serif;">{{ post.title }}</h4>
-                  <p class="post-content">{{ post.description }}</p>
-                  
-                  <div v-if="post.attachments && post.attachments.length > 0" class="post-attachments" style="margin-top: 10px;">
-                    <div v-for="att in post.attachments" :key="att.id" style="font-size: 12px; margin-bottom: 4px;">
-                      <span @click.stop>📎 {{ att.file_name }}</span>
-                    </div>
-                  </div>
-
-                  <div class="post-actions">
-                    <button class="post-action">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      Comments
-                    </button>
-                  </div>
+                </div>
+                <h3 class="post-title">{{ post.title }}</h3>
+                <p class="post-desc">{{ post.description }}</p>
+                <div class="post-footer">
+                  <span class="post-stat">💬 Comments</span>
+                  <span v-if="post.attachments_count" class="post-stat">📎 {{ post.attachments_count }} Files</span>
                 </div>
               </div>
-              <div v-if="posts.length === 0" style="text-align: center; padding: 40px; color: rgba(255,255,255,0.2);">
-                No materials here yet.
+              <div v-if="posts.length === 0" class="empty-state">
+                <p>No materials shared yet.</p>
               </div>
             </div>
           </template>
         </template>
 
-        <!-- EVENTS CONTENT -->
         <template v-else>
           <div class="content__header">
             <div>
               <h2 class="content__title">Community Events</h2>
-              <p class="content__sub">Live sessions, webinars and workshops to support your journey</p>
+              <p class="content__sub">Workshops and sessions for you</p>
             </div>
-            <button class="composer-btn">+ Create event</button>
+            <button class="composer-btn" @click="showCreateEventModal = true">+ Propose Event</button>
           </div>
           <div class="events-grid">
             <div v-for="ev in events" :key="ev.id" class="event-card">
               <div class="event-card__top">
                 <span class="event-icon">{{ ev.icon }}</span>
-                <span v-if="!ev.is_approved" style="background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 100px; font-size: 10px; font-weight: bold;">Pending approval</span>
-                <span v-else class="event-badge">Approved</span>
+                <span class="event-badge" :class="{ 'event-badge--pending': !ev.is_approved }">
+                  {{ ev.is_approved ? 'Approved' : 'Pending' }}
+                </span>
               </div>
               <h3 class="event-card__title">{{ ev.title }}</h3>
               <div class="event-card__meta">
-                <span>🕐 {{ new Date(ev.start_time).toLocaleString('hu-HU') }}</span>
+                <span>📅 {{ new Date(ev.start_time).toLocaleDateString() }}</span>
+                <span>🕐 {{ new Date(ev.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}</span>
+                <span v-if="ev.location">📍 {{ ev.location }}</span>
               </div>
-              <div class="event-card__footer">
-                <span class="event-host">by {{ ev.author_name }}</span>
+              <div style="margin-top: auto; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 11px; color: rgba(255,255,255,0.3);">{{ ev.interests_count || 0 }} interested</span>
+                <button 
+                  class="event-rsvp" 
+                  :class="{ 'event-rsvp--active': ev.is_interested }"
+                  @click="toggleInterest(ev)"
+                >
+                  {{ ev.is_interested ? 'Interested ✓' : 'Interested' }}
+                </button>
               </div>
-              <button class="event-rsvp">Interested</button>
             </div>
           </div>
         </template>
-
       </main>
 
       <!-- RIGHT PANEL -->
       <aside class="right-panel">
         <div class="rp-section">
-          <div class="rp-label">Explore Channels</div>
-          <div class="rp-channels">
-            <div v-for="ch in allChannels.slice(0, 5)" :key="ch.id" class="rp-channel" @click="selectChannel(ch)">
-              <span class="ch-icon ch-icon--sm" :style="{ background: ch.color + '18' }">{{ ch.icon }}</span>
-              <div class="ch-info">
-                <span class="ch-name">{{ ch.name }}</span>
-              </div>
-              <button class="join-btn" @click.stop="toggleJoin(ch)">{{ ch.joined ? 'Joined' : '+ Join' }}</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="rp-section">
-          <div class="rp-label">Next Event</div>
+          <div class="rp-label">Featured</div>
           <div class="rp-event-card">
             <span class="rp-event-icon">🧘</span>
             <div>
-              <div class="rp-event-title">Group Meditation</div>
-              <div class="rp-event-time">Apr 22 · 7:00 PM</div>
+              <div class="rp-event-title">Weekly Zen</div>
+              <div class="rp-event-time">Tomorrow · 6:00 PM</div>
             </div>
           </div>
         </div>
       </aside>
-
     </div>
 
-    <!-- CREATE POST MODAL -->
+    <!-- MODALS -->
     <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
       <div class="modal-card">
-        <div class="modal-head">
-          <h3>Create New Post</h3>
-          <button class="close-btn" @click="showCreateModal = false">×</button>
-        </div>
+        <div class="modal-head"><h3>New Post</h3><button class="close-btn" @click="showCreateModal = false">×</button></div>
         <div class="modal-body">
-          <input v-model="newPost.title" placeholder="Post Title" class="modal-input" />
-          <input v-model="newPost.description" placeholder="Short summary" class="modal-input" />
-          <textarea v-model="newPost.content" placeholder="Content details..." class="modal-textarea"></textarea>
-          
-          <div class="file-upload">
+          <input v-model="newPost.title" placeholder="Title" class="modal-input" />
+          <textarea v-model="newPost.content" placeholder="What's on your mind?" class="modal-textarea"></textarea>
+          <div class="file-upload-zone">
             <label class="file-label">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-              Attach Files
-              <input type="file" ref="fileInput" multiple @change="handleFileSelect" hidden />
+              Add Attachments
+              <input type="file" multiple @change="handleFileSelect" hidden />
             </label>
-            <div v-if="selectedFiles.length" class="selected-files">
-              <span v-for="f in selectedFiles" :key="f.name" class="file-tag">{{ f.name }}</span>
+            <div class="file-list">
+              <div v-for="(f, i) in selectedFiles" :key="i" class="file-tag">
+                {{ f.name }} <span @click="removeFile(i)">×</span>
+              </div>
             </div>
           </div>
-
           <button class="submit-btn" :disabled="isSubmitting" @click="submitPost">
-            {{ isSubmitting ? 'Posting...' : 'Share with Community' }}
+            {{ isSubmitting ? 'Posting...' : 'Share Post' }}
           </button>
         </div>
       </div>
     </div>
 
-    <!-- POST DETAIL MODAL -->
     <div v-if="showPostModal && selectedPost" class="modal-overlay" @click.self="showPostModal = false">
       <div class="modal-card modal-card--lg">
         <div class="modal-head">
@@ -517,432 +495,293 @@ const toggleJoin = async (channel) => {
               <div class="post-time">{{ new Date(selectedPost.created_at).toLocaleString() }}</div>
             </div>
           </div>
-          <div style="display: flex; gap: 8px;">
-            <button v-if="canManagePost(selectedPost)" class="action-btn-sm" @click="openEditModal(selectedPost)">Edit</button>
-            <button v-if="canManagePost(selectedPost)" class="action-btn-sm action-btn-sm--danger" @click="deletePost(selectedPost)">Delete</button>
+          <div class="modal-actions">
+            <button v-if="canManagePost(selectedPost)" @click="openEditModal(selectedPost)" class="action-btn">Edit</button>
+            <button v-if="canManagePost(selectedPost)" @click="deletePost(selectedPost)" class="action-btn action-btn--danger">Delete</button>
             <button class="close-btn" @click="showPostModal = false">×</button>
           </div>
         </div>
-        <div class="modal-body">
+        <div class="modal-body modal-body--detail">
           <h2 class="detail-title">{{ selectedPost.title }}</h2>
           <p class="detail-content">{{ selectedPost.content }}</p>
-
-          <div v-if="selectedPost.attachments?.length" class="detail-section">
+          <div v-if="selectedPost.attachments?.length" class="attachments-section">
             <label>Attachments</label>
-            <div class="detail-attachments">
+            <div class="attachments-list">
               <a v-for="att in selectedPost.attachments" :key="att.id" :href="api.defaults.baseURL + att.file_url" target="_blank" class="att-link">
                 📎 {{ att.file_name }}
               </a>
             </div>
           </div>
-
-          <div class="detail-section">
-            <label>Comments ({{ selectedPost.comments?.length || 0 }})</label>
-            <div class="comments-list">
-              <div v-for="com in selectedPost.comments" :key="com.id" class="comment">
-                <span class="comment-user">{{ com.author_name }}:</span>
-                <p class="comment-text">{{ com.content }}</p>
-              </div>
-              <div v-if="!selectedPost.comments?.length" class="empty-state-sm">No comments yet.</div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
 
-    <!-- EDIT POST MODAL -->
     <div v-if="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
       <div class="modal-card">
-        <div class="modal-head">
-          <h3>Edit Post</h3>
-          <button class="close-btn" @click="showEditModal = false">×</button>
-        </div>
+        <div class="modal-head"><h3>Edit Post</h3><button class="close-btn" @click="showEditModal = false">×</button></div>
         <div class="modal-body">
-          <input v-model="editingPost.title" placeholder="Post Title" class="modal-input" />
-          <input v-model="editingPost.description" placeholder="Short summary" class="modal-input" />
-          <textarea v-model="editingPost.content" placeholder="Content details..." class="modal-textarea"></textarea>
-          <button class="submit-btn" :disabled="isSubmitting" @click="submitEdit">
-            {{ isSubmitting ? 'Saving...' : 'Save Changes' }}
+          <input v-model="editingPost.title" class="modal-input" />
+          <textarea v-model="editingPost.content" class="modal-textarea"></textarea>
+          <button class="submit-btn" :disabled="isSubmitting" @click="submitEdit">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showCreateEventModal" class="modal-overlay" @click.self="showCreateEventModal = false">
+      <div class="modal-card">
+        <div class="modal-head"><h3>Propose Event</h3><button class="close-btn" @click="showCreateEventModal = false">×</button></div>
+        <div class="modal-body">
+          <div class="input-group">
+            <label class="modal-label">Event Name</label>
+            <input v-model="newEvent.title" placeholder="e.g. Study Group" class="modal-input" />
+          </div>
+          <div class="input-group">
+            <label class="modal-label">Location</label>
+            <input v-model="newEvent.location" placeholder="Room, Online, etc." class="modal-input" />
+          </div>
+          <div class="input-group">
+            <label class="modal-label">Description</label>
+            <textarea v-model="newEvent.description" placeholder="Details..." class="modal-textarea" style="min-height: 80px;"></textarea>
+          </div>
+          
+          <div class="modal-grid">
+            <div class="input-group">
+              <label class="modal-label">Start Date</label>
+              <input v-model="newEvent.start_date" type="date" class="modal-input" />
+            </div>
+            <div class="input-group">
+              <label class="modal-label">Start Time</label>
+              <input v-model="newEvent.start_time" type="time" class="modal-input" />
+            </div>
+          </div>
+          
+          <div class="modal-grid">
+            <div class="input-group">
+              <label class="modal-label">End Date (optional)</label>
+              <input v-model="newEvent.end_date" type="date" class="modal-input" />
+            </div>
+            <div class="input-group">
+              <label class="modal-label">End Time (optional)</label>
+              <input v-model="newEvent.end_time" type="time" class="modal-input" />
+            </div>
+          </div>
+          
+          <button class="submit-btn" :disabled="isSubmitting" @click="submitEvent" style="margin-top: 10px;">
+            {{ isSubmitting ? 'Submitting...' : 'Submit for Approval' }}
           </button>
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap');
 
 .page {
   font-family: 'DM Sans', sans-serif;
-  background: #080b12;
-  color: #e8edf5;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  background: #080b12; color: #e8edf5;
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
 }
 
 /* NAVBAR */
 .navbar {
-  position: sticky; top: 0; z-index: 100;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 28px;
-  background: rgba(8,11,18,0.9);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 14px 28px; background: rgba(8, 11, 18, 0.8);
+  backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex; justify-content: space-between; align-items: center; z-index: 100;
 }
 .back-btn {
-  display: flex; align-items: center; gap: 6px;
-  background: none; border: 1px solid rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.5); font-size: 13px;
-  padding: 6px 14px; border-radius: 100px; cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
-  transition: all 0.2s;
+  display: flex; align-items: center; gap: 8px; background: none; border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5); font-size: 13px; padding: 6px 16px; border-radius: 100px; cursor: pointer;
 }
-.back-btn:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
-.navbar__brand {
-  display: flex; align-items: center; gap: 8px;
-  font-family: 'Sora', sans-serif; font-weight: 600; font-size: 15px;
-}
-.brand-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: linear-gradient(135deg, #5ee7b0, #3b9eff);
-  box-shadow: 0 0 8px rgba(94,231,176,0.5);
-}
-.brand-divider { color: rgba(255,255,255,0.2); font-weight: 300; }
-.brand-sub { color: rgba(255,255,255,0.4); font-weight: 400; }
-.navbar__right .avatar {
-  width: 34px; height: 34px; border-radius: 50%;
-  background: linear-gradient(135deg, #1e2d45, #0f1929);
-  border: 1.5px solid rgba(255,255,255,0.1);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; color: #8baacc; font-weight: 600;
-}
+.navbar__brand { display: flex; align-items: center; gap: 10px; font-family: 'Sora', sans-serif; font-weight: 600; font-size: 16px; }
+.brand-dot { width: 8px; height: 8px; border-radius: 50%; background: #5ee7b0; }
+.brand-divider { color: rgba(255,255,255,0.1); margin: 0 4px; }
+.brand-sub { color: rgba(255,255,255,0.4); }
+.role-badge { font-size: 10px; font-weight: 700; color: #3b9eff; background: rgba(59, 158, 255, 0.1); padding: 4px 10px; border-radius: 100px; margin-right: 12px; border: 1px solid rgba(59, 158, 255, 0.2); }
+.avatar { width: 34px; height: 34px; border-radius: 50%; background: #1e2d45; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); }
 
 /* LAYOUT */
-.layout {
-  display: flex;
-  flex-direction: row;
-  flex: 1;
-  height: calc(100vh - 57px);
-  overflow: hidden;
-}
+.layout { display: flex; flex: 1; overflow: hidden; }
 
 /* SIDEBAR */
 .sidebar {
-  width: 260px; min-width: 260px;
-  background: #0a0e18;
-  border-right: 1px solid rgba(255,255,255,0.05);
-  display: flex; flex-direction: column;
-  overflow-y: auto;
-  padding: 16px 0;
+  width: 260px; background: #0a0e18; border-right: 1px solid rgba(255,255,255,0.05);
+  display: flex; flex-direction: column; padding: 20px 0;
 }
-.sidebar::-webkit-scrollbar { width: 4px; }
-.sidebar::-webkit-scrollbar-track { background: transparent; }
-.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
-
-.sidebar__tabs {
-  display: flex; gap: 4px;
-  padding: 0 12px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  margin-bottom: 16px;
-}
+.sidebar__tabs { padding: 0 16px 20px; display: flex; gap: 8px; }
 .tab {
-  flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
-  padding: 9px 10px; border-radius: 10px;
-  font-size: 13px; font-weight: 500;
-  font-family: 'DM Sans', sans-serif;
-  background: none; border: none; color: rgba(255,255,255,0.35);
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 500;
+  background: none; border: none; color: rgba(255,255,255,0.3); cursor: pointer;
+}
+.tab--active { background: rgba(94, 231, 176, 0.1); color: #5ee7b0; }
+.sidebar__section-label { font-size: 11px; text-transform: uppercase; color: rgba(255,255,255,0.2); padding: 0 20px 12px; letter-spacing: 1px; }
+
+.channel-list { flex: 1; overflow-y: auto; padding: 0 12px; display: flex; flex-direction: column; gap: 4px; }
+.channel-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px;
   cursor: pointer; transition: all 0.2s;
 }
-.tab:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7); }
-.tab--active { background: rgba(94,231,176,0.1); color: #5ee7b0; }
-
-.sidebar__section-label {
-  font-size: 10.5px; text-transform: uppercase; letter-spacing: 2px;
-  color: rgba(255,255,255,0.22); padding: 0 16px 10px; font-weight: 500;
-}
-
-/* CHANNEL LIST */
-.channel-list { display: flex; flex-direction: column; gap: 2px; padding: 0 8px; }
-.channel-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 10px; border-radius: 10px;
-  cursor: pointer; transition: all 0.18s;
-  position: relative;
-}
-.channel-item:hover { background: rgba(255,255,255,0.05); }
-.channel-item--active { background: rgba(94,231,176,0.08); }
+.channel-item:hover { background: rgba(255,255,255,0.03); }
+.channel-item--active { background: rgba(59, 158, 255, 0.08); }
+.channel-item--active .ch-name { color: #3b9eff; font-weight: 600; }
 .ch-icon {
-  width: 34px; height: 34px; border-radius: 10px;
-  border: 1px solid transparent;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 17px; flex-shrink: 0;
+  width: 32px; height: 32px; border-radius: 10px; border: 1px solid transparent;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
 }
-.ch-icon--sm { width: 28px; height: 28px; border-radius: 8px; font-size: 14px; }
-.ch-icon--lg { width: 44px; height: 44px; border-radius: 12px; font-size: 22px; border: 1px solid transparent; }
-.ch-info { flex: 1; min-width: 0; }
-.ch-name { display: block; font-size: 13.5px; font-weight: 500; color: rgba(255,255,255,0.8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ch-members { font-size: 11px; color: rgba(255,255,255,0.3); }
-.ch-active-dot { width: 6px; height: 6px; border-radius: 50%; background: #5ee7b0; flex-shrink: 0; }
-.ch-empty { font-size: 12.5px; color: rgba(255,255,255,0.25); padding: 12px 10px; }
+.ch-info { flex: 1; display: flex; flex-direction: column; }
+.ch-name { font-size: 14px; color: rgba(255,255,255,0.7); }
+.ch-status { font-size: 10px; color: #5ee7b0; opacity: 0.8; }
 
-/* ADD CHANNEL */
-.add-channel { padding: 12px 8px 0; }
+.add-channel { padding: 16px 16px 0; }
 .add-btn {
   width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 9px; border-radius: 10px;
-  background: rgba(94,231,176,0.07); border: 1px dashed rgba(94,231,176,0.2);
-  color: rgba(94,231,176,0.7); font-size: 13px;
-  font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s;
+  padding: 10px; border-radius: 12px; background: rgba(255,255,255,0.03);
+  border: 1px dashed rgba(255,255,255,0.1); color: rgba(255,255,255,0.4);
+  font-size: 13px; cursor: pointer;
 }
-.add-btn:hover { background: rgba(94,231,176,0.12); color: #5ee7b0; }
-.search-box { margin-top: 10px; }
 .search-input {
-  width: 100%; padding: 9px 12px; border-radius: 10px;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-  color: #e8edf5; font-size: 13px; font-family: 'DM Sans', sans-serif;
-  outline: none; transition: border-color 0.2s;
+  width: 100%; margin-top: 10px; padding: 10px; border-radius: 10px; background: #161c27;
+  border: 1px solid rgba(255,255,255,0.1); color: #fff; outline: none; font-size: 13px;
 }
-.search-input:focus { border-color: rgba(94,231,176,0.4); }
-.search-input::placeholder { color: rgba(255,255,255,0.25); }
-.search-results { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
-.search-hint { font-size: 12px; color: rgba(255,255,255,0.25); text-align: center; padding: 12px 0; }
-.search-result-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px; border-radius: 8px;
-  transition: background 0.15s;
-}
-.search-result-item:hover { background: rgba(255,255,255,0.04); }
+
+/* CONTENT */
+.content { flex: 1; overflow-y: auto; padding: 32px; display: flex; flex-direction: column; gap: 24px; }
+.content__header { display: flex; justify-content: space-between; align-items: flex-start; }
+.content__header-left { display: flex; align-items: center; gap: 18px; }
+.content__title { font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 600; }
+.content__sub { color: rgba(255,255,255,0.4); font-size: 14px; margin-top: 4px; }
+
 .join-btn {
-  padding: 5px 12px; border-radius: 100px; font-size: 12px;
-  font-family: 'DM Sans', sans-serif; cursor: pointer; font-weight: 500;
-  background: rgba(94,231,176,0.12); border: 1px solid rgba(94,231,176,0.3);
-  color: #5ee7b0; transition: all 0.2s; white-space: nowrap;
+  padding: 10px 24px; border-radius: 100px; background: #5ee7b0; color: #080b12;
+  border: none; font-weight: 600; cursor: pointer; transition: all 0.2s;
 }
-.join-btn:hover { background: rgba(94,231,176,0.22); }
-.join-btn--leave { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #f87171; }
-.join-btn--leave:hover { background: rgba(239,68,68,0.2); }
-
-/* EVENTS SIDEBAR */
-.event-types { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px; }
-.event-tag {
-  padding: 5px 12px; border-radius: 100px; font-size: 12px;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.4); cursor: pointer; transition: all 0.2s;
-}
-.event-tag:hover, .event-tag--active {
-  background: rgba(94,231,176,0.1); border-color: rgba(94,231,176,0.3); color: #5ee7b0;
-}
-
-/* MAIN CONTENT */
-.content {
-  flex: 1; overflow-y: auto;
-  padding: 28px 32px;
-  display: flex; flex-direction: column; gap: 20px;
-}
-.content::-webkit-scrollbar { width: 4px; }
-.content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
-
-.content__header {
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
-}
-.content__header-left { display: flex; align-items: center; gap: 14px; }
-.content__title {
-  font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 600;
-  color: #f0f4ff; letter-spacing: -0.5px;
-}
-.content__sub { font-size: 13px; color: rgba(255,255,255,0.35); margin-top: 3px; }
-.leave-btn {
-  padding: 8px 18px; border-radius: 100px; font-size: 13px;
-  background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
-  color: #f87171; cursor: pointer; font-family: 'DM Sans', sans-serif;
-  transition: all 0.2s; white-space: nowrap;
-}
-.leave-btn:hover { background: rgba(239,68,68,0.15); }
+.join-btn--leave { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; }
 
 /* COMPOSER */
 .composer {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 18px;
+  display: flex; align-items: center; gap: 14px; padding: 16px 20px;
   background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 14px;
+  border-radius: 18px; cursor: pointer; transition: border-color 0.2s;
 }
+.composer:hover { border-color: rgba(255,255,255,0.15); }
 .composer-avatar {
-  width: 34px; height: 34px; border-radius: 50%;
-  background: linear-gradient(135deg, #1e2d45, #0f1929);
-  border: 1.5px solid rgba(255,255,255,0.1);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; color: #8baacc; font-weight: 600; flex-shrink: 0;
+  width: 36px; height: 36px; border-radius: 50%; background: #1e2d45;
+  display: flex; align-items: center; justify-content: center; font-weight: 600; color: #8baacc;
 }
-.composer-input {
-  flex: 1; font-size: 14px; color: rgba(255,255,255,0.25);
-  cursor: text; padding: 4px 0;
-}
+.composer-input { flex: 1; color: rgba(255,255,255,0.3); font-size: 15px; }
 .composer-btn {
-  padding: 8px 20px; border-radius: 100px; font-size: 13px; font-weight: 500;
-  background: linear-gradient(135deg, #5ee7b0, #3b9eff);
-  border: none; color: #070b12; cursor: pointer;
-  font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+  padding: 8px 18px; border-radius: 100px; background: #fff; color: #000;
+  border: none; font-weight: 600; font-size: 13px; cursor: pointer;
 }
-.composer-btn:hover { opacity: 0.9; transform: translateY(-1px); }
 
-/* POSTS */
-.posts { display: flex; flex-direction: column; gap: 12px; }
-.post {
-  display: flex; gap: 14px;
-  padding: 18px; background: rgba(255,255,255,0.025);
-  border: 1px solid rgba(255,255,255,0.06); border-radius: 14px;
-  transition: border-color 0.2s;
+/* POST FEED */
+.posts-feed { display: flex; flex-direction: column; gap: 16px; }
+.post-card {
+  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 20px; padding: 24px; cursor: pointer; transition: all 0.2s;
 }
-.post:hover { border-color: rgba(255,255,255,0.1); }
+.post-card:hover { border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); }
+.post-card--pinned { border-left: 4px solid #5ee7b0; background: rgba(94, 231, 176, 0.02); }
+
+.post-card__head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.post-user { display: flex; align-items: center; gap: 12px; }
 .post-avatar {
-  width: 38px; height: 38px; border-radius: 50%;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,0.05);
+  display: flex; align-items: center; justify-content: center; font-weight: 700;
 }
-.post-body { flex: 1; }
-.post-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.post-user { font-size: 13.5px; font-weight: 500; color: rgba(255,255,255,0.8); }
-.post-time { font-size: 12px; color: rgba(255,255,255,0.28); }
-.post-content { font-size: 14.5px; color: rgba(255,255,255,0.65); line-height: 1.6; margin-bottom: 14px; font-weight: 300; }
-.post-actions { display: flex; gap: 4px; }
-.post-action {
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 12px; border-radius: 8px;
-  background: none; border: none; color: rgba(255,255,255,0.3);
-  font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif;
-  transition: all 0.15s;
-}
-.post-action:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.65); }
+.post-author { font-size: 15px; font-weight: 500; color: #f0f4ff; }
+.post-time { font-size: 12px; color: rgba(255,255,255,0.3); }
 
-/* EMPTY STATE */
-.empty-state {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 12px;
-  color: rgba(255,255,255,0.25); text-align: center;
-}
-.empty-icon { font-size: 48px; opacity: 0.4; }
-.empty-state h3 { font-family: 'Sora', sans-serif; font-size: 18px; color: rgba(255,255,255,0.4); }
-.empty-state p { font-size: 14px; }
+.post-title { font-family: 'Sora', sans-serif; font-size: 18px; margin-bottom: 8px; }
+.post-desc { color: rgba(255,255,255,0.6); font-size: 15px; line-height: 1.6; margin-bottom: 18px; }
+.post-footer { display: flex; gap: 16px; }
+.post-stat { font-size: 12px; color: rgba(255,255,255,0.3); }
 
-/* EVENTS GRID */
-.events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-.event-card {
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 10px;
-  transition: all 0.25s;
-}
-.event-card:hover { border-color: rgba(255,255,255,0.12); transform: translateY(-3px); }
-.event-card__top { display: flex; align-items: center; justify-content: space-between; }
-.event-icon { font-size: 28px; }
-.event-badge {
-  font-size: 11px; padding: 3px 10px; border-radius: 100px;
-  background: rgba(94,231,176,0.1); border: 1px solid rgba(94,231,176,0.25); color: #5ee7b0;
-}
-.event-card__title { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 600; color: #f0f4ff; line-height: 1.4; }
-.event-card__meta { display: flex; gap: 14px; font-size: 12px; color: rgba(255,255,255,0.35); }
-.event-card__footer { display: flex; justify-content: space-between; font-size: 12px; color: rgba(255,255,255,0.3); margin-top: 2px; }
-.event-host { font-style: italic; }
-.event-rsvp {
-  margin-top: 4px; padding: 9px; border-radius: 10px; font-size: 13px; font-weight: 500;
-  background: rgba(94,231,176,0.1); border: 1px solid rgba(94,231,176,0.25);
-  color: #5ee7b0; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s;
-}
-.event-rsvp:hover { background: rgba(94,231,176,0.2); }
+.pinned-badge { font-size: 10px; font-weight: 700; color: #5ee7b0; background: rgba(94, 231, 176, 0.1); padding: 4px 10px; border-radius: 100px; }
+.pin-action-btn { background: none; border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 11px; padding: 4px 12px; border-radius: 8px; cursor: pointer; margin-left: 8px; }
 
-/* RIGHT PANEL */
-.right-panel {
-  width: 240px; min-width: 240px;
-  background: #0a0e18;
-  border-left: 1px solid rgba(255,255,255,0.05);
-  padding: 20px 16px;
-  display: flex; flex-direction: column; gap: 28px;
-  overflow-y: auto;
-}
-.rp-label {
-  font-size: 10.5px; text-transform: uppercase; letter-spacing: 2px;
-  color: rgba(255,255,255,0.22); margin-bottom: 12px; font-weight: 500;
-}
-.rp-section {}
-.rp-channels { display: flex; flex-direction: column; gap: 4px; }
-.rp-channel {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px; border-radius: 10px; transition: background 0.15s;
-}
-.rp-channel:hover { background: rgba(255,255,255,0.04); }
-.rp-event-card {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px; border-radius: 12px;
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
-}
-.rp-event-icon { font-size: 24px; }
-.rp-event-title { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.75); }
-.rp-event-time { font-size: 11.5px; color: rgba(255,255,255,0.3); margin-top: 2px; }
-
-/* TRANSITIONS */
-.fade-slide-enter-active, .fade-slide-leave-active { transition: all 0.25s cubic-bezier(0.4,0,0.2,1); }
-.fade-slide-enter-from, .fade-slide-leave-to { opacity: 0; transform: translateY(-8px); }
-
-@media (max-width: 900px) {
-  .right-panel { display: none; }
-}
-@media (max-width: 600px) {
-  .sidebar { width: 200px; min-width: 200px; }
-  .content { padding: 20px 16px; }
-}
+/* MODALS */
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
-  z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px;
 }
 .modal-card {
-  background: #111722; border: 1px solid rgba(255,255,255,0.08); border-radius: 24px;
-  width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto;
-  box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+  background: #111722; border: 1px solid rgba(255,255,255,0.08); border-radius: 28px;
+  width: 100%; max-width: 520px; padding: 32px; box-shadow: 0 40px 100px rgba(0,0,0,0.6);
 }
 .modal-card--lg { max-width: 800px; }
-.modal-head { padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; }
-.modal-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.modal-head h3 { font-family: 'Sora', sans-serif; font-size: 20px; }
+.modal-body { display: flex; flex-direction: column; gap: 16px; }
+.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.modal-label { font-size: 11px; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 6px; display: block; letter-spacing: 0.5px; }
+
 .modal-input, .modal-textarea {
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-  padding: 12px 16px; border-radius: 12px; color: #fff; font-family: inherit; width: 100%; outline: none;
+  width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px; padding: 14px 18px; color: #fff; font-family: inherit; outline: none; transition: border-color 0.2s;
+  color-scheme: dark; /* Crucial for visible native icons in dark mode */
 }
-.modal-textarea { min-height: 120px; resize: vertical; }
+/* Ensure the calendar/clock icon is clickable and visible */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(1);
+  opacity: 0.6;
+}
+input[type="datetime-local"] {
+  min-height: 50px;
+}
+.modal-input:focus, .modal-textarea:focus { border-color: #5ee7b0; }
+.modal-textarea { min-height: 150px; resize: vertical; }
+
+.file-upload-zone { border: 1px dashed rgba(255,255,255,0.1); border-radius: 14px; padding: 16px; }
+.file-label { display: flex; align-items: center; gap: 8px; color: #5ee7b0; font-size: 14px; cursor: pointer; }
+.file-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.file-tag { background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 6px; font-size: 12px; display: flex; gap: 6px; }
+.file-tag span { color: #f87171; cursor: pointer; }
+
 .submit-btn {
-  background: #5ee7b0; color: #080b12; border: none; padding: 14px; border-radius: 12px;
+  background: #5ee7b0; color: #080b12; border: none; padding: 16px; border-radius: 14px;
   font-weight: 700; cursor: pointer; transition: transform 0.2s;
 }
-.submit-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(94,231,176,0.3); }
+.submit-btn:hover { transform: translateY(-2px); }
+.submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-.detail-title { font-family: 'Sora', sans-serif; font-size: 24px; margin-bottom: 8px; }
-.detail-content { font-size: 15px; color: rgba(255,255,255,0.7); line-height: 1.6; }
-.detail-section { margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 20px; }
-.detail-section label { font-size: 11px; text-transform: uppercase; color: rgba(255,255,255,0.3); display: block; margin-bottom: 12px; }
-.att-link { display: inline-block; padding: 8px 16px; background: rgba(255,255,255,0.04); border-radius: 8px; color: #5ee7b0; text-decoration: none; margin-right: 10px; font-size: 13px; }
+.close-btn { background: none; border: none; color: #fff; font-size: 32px; cursor: pointer; line-height: 1; }
+.action-btn { padding: 6px 16px; border-radius: 100px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 13px; cursor: pointer; }
+.action-btn--danger { color: #f87171; border-color: rgba(239,68,68,0.2); }
 
-.comments-list { display: flex; flex-direction: column; gap: 12px; }
-.comment { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; }
-.comment-user { font-size: 12px; font-weight: 700; color: #3b9eff; display: block; margin-bottom: 4px; }
-.comment-text { font-size: 13px; color: rgba(255,255,255,0.8); }
-.close-btn { background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; line-height: 1; }
+.detail-title { font-family: 'Sora', sans-serif; font-size: 28px; margin-bottom: 12px; }
+.detail-content { font-size: 16px; color: rgba(255,255,255,0.7); line-height: 1.7; white-space: pre-wrap; }
+.attachments-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.06); }
+.attachments-section label { font-size: 11px; text-transform: uppercase; color: rgba(255,255,255,0.3); letter-spacing: 1px; display: block; margin-bottom: 12px; }
+.att-link { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; background: rgba(255,255,255,0.04); border-radius: 10px; color: #5ee7b0; text-decoration: none; font-size: 14px; }
 
-.file-upload { margin: 10px 0; }
-.file-label {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: rgba(255,255,255,0.08); padding: 8px 16px; border-radius: 8px;
-  font-size: 13px; color: #5ee7b0; cursor: pointer; border: 1px dashed rgba(94,231,176,0.3);
+/* EVENTS GRID */
+.events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+.event-card {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 20px;
+  padding: 24px; display: flex; flex-direction: column; gap: 12px;
 }
-.selected-files { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.file-tag { font-size: 11px; background: rgba(255,255,255,0.04); padding: 4px 8px; border-radius: 4px; color: rgba(255,255,255,0.6); }
+.event-badge { font-size: 11px; padding: 4px 12px; border-radius: 100px; background: rgba(94, 231, 176, 0.1); color: #5ee7b0; font-weight: 600; }
+.event-badge--pending { background: rgba(255, 167, 38, 0.1); color: #ffa726; }
+.event-card__title { font-family: 'Sora', sans-serif; font-size: 17px; }
+.event-card__meta { font-size: 13px; color: rgba(255,255,255,0.4); display: flex; flex-direction: column; gap: 4px; }
+.event-rsvp { margin-top: 8px; padding: 12px; border-radius: 12px; border: 1px solid #5ee7b0; color: #5ee7b0; background: none; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.event-rsvp--active { background: #5ee7b0; color: #080b12; }
 
-.action-btn-sm {
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-  color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
-}
-.action-btn-sm--danger { color: #ff8080; border-color: rgba(255,128,128,0.2); }
+/* RIGHT PANEL */
+.right-panel { width: 280px; background: #0a0e18; border-left: 1px solid rgba(255,255,255,0.05); padding: 32px 20px; }
+.rp-label { font-size: 11px; text-transform: uppercase; color: rgba(255,255,255,0.25); margin-bottom: 16px; }
+.rp-event-card { display: flex; gap: 14px; align-items: center; background: rgba(255,255,255,0.02); padding: 16px; border-radius: 16px; }
+.rp-event-icon { font-size: 24px; }
+.rp-event-title { font-size: 14px; font-weight: 500; }
+.rp-event-time { font-size: 12px; color: rgba(255,255,255,0.3); margin-top: 2px; }
 
-.post-avatar { width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+.empty-state { text-align: center; padding: 60px 20px; color: rgba(255,255,255,0.2); }
+.empty-icon { font-size: 40px; margin-bottom: 16px; display: block; opacity: 0.3; }
+
+@media (max-width: 1000px) { .right-panel { display: none; } }
 </style>
