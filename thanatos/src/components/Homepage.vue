@@ -162,14 +162,12 @@ function logout() {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 .page {
-  font-family: 'DM Sans', sans-serif;
-  background: #080b12;
-  color: #e8edf5;
+  font-family: var(--universalfontstyle);
+  background: var(--universalbackgrounbcolor);
+  color: var(--universalprimarytextcolor);
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -186,7 +184,7 @@ function logout() {
   transition: all 0.4s ease;
 }
 .navbar--scrolled {
-  background: rgba(8, 11, 18, 0.82);
+  background: var(--universalbackgrounbcolor);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -196,7 +194,7 @@ function logout() {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--universalfontstyle);
   font-weight: 600;
   font-size: 17px;
   letter-spacing: -0.3px;
@@ -208,9 +206,9 @@ function logout() {
   box-shadow: 0 0 10px rgba(94,231,176,0.6);
 }
 .brand-dot--sm { width: 6px; height: 6px; }
-.brand-name { color: #f0f4ff; }
+.brand-name { color: var(--universalprimarytextcolor); }
 .navbar__actions { display: flex; align-items: center; gap: 20px; }
-.nav-label { font-size: 13px; color: rgba(255,255,255,0.35); letter-spacing: 0.3px; }
+.nav-label { font-size: 13px; color: var(--universalsecondarytextcolor); letter-spacing: 0.3px; }
 
 /* Profile */
 .profile-container { position: relative; cursor: pointer; }
@@ -240,11 +238,11 @@ function logout() {
   padding: 9px 12px;
   border-radius: 8px;
   font-size: 13.5px;
-  color: rgba(255,255,255,0.7);
+  color: var(--universalsecondarytextcolor);
   text-decoration: none;
   transition: all 0.15s;
 }
-.dropdown__item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.dropdown__item:hover { background: rgba(255,255,255,0.06); color: var(--universalprimarytextcolor); }
 .dropdown__item--danger:hover { background: rgba(239,68,68,0.1); color: #f87171; }
 .dropdown__divider { height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0; }
 
@@ -317,12 +315,12 @@ function logout() {
 }
 
 .hero__title {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--universalfontstyle);
   font-size: clamp(44px, 7vw, 80px);
   font-weight: 700;
   line-height: 1.08;
   letter-spacing: -2px;
-  color: #f0f4ff;
+  color: var(--universalprimarytextcolor);
   margin-bottom: 24px;
 }
 .hero__title-em {
@@ -335,7 +333,7 @@ function logout() {
 }
 .hero__sub {
   font-size: 18px;
-  color: rgba(255,255,255,0.45);
+  color: var(--universalsecondarytextcolor);
   line-height: 1.65;
   max-width: 480px;
   margin: 0 auto 40px;
@@ -346,7 +344,7 @@ function logout() {
 .btn {
   padding: 14px 32px;
   border-radius: 100px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--universalfontstyle);
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
@@ -357,7 +355,7 @@ function logout() {
 .btn:active { transform: scale(0.96); }
 .btn--primary {
   background: linear-gradient(135deg, #5ee7b0, #3b9eff);
-  color: #070b12;
+  color: var(--universalbackgrounbcolor);
   box-shadow: 0 0 30px rgba(94,231,176,0.2);
 }
 .btn--primary:hover {
@@ -366,12 +364,12 @@ function logout() {
 }
 .btn--ghost {
   background: transparent;
-  color: rgba(255,255,255,0.55);
+  color: var(--universalsecondarytextcolor);
   border: 1px solid rgba(255,255,255,0.12);
 }
 .btn--ghost:hover {
   background: rgba(255,255,255,0.05);
-  color: rgba(255,255,255,0.85);
+  color: var(--universalprimarytextcolor);
   border-color: rgba(255,255,255,0.2);
   transform: translateY(-1px);
 }
@@ -387,7 +385,7 @@ function logout() {
   font-size: 11px;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.2);
+  color: var(--universalsecondarytextcolor);
 }
 .scroll-line {
   width: 1px; height: 48px;
@@ -416,15 +414,15 @@ function logout() {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 2.5px;
-  color: rgba(94,231,176,0.7);
+  color: var(--universalaccentcolor);
   margin-bottom: 14px;
   font-weight: 500;
 }
 .section-title {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--universalfontstyle);
   font-size: clamp(28px, 4vw, 44px);
   font-weight: 600;
-  color: #f0f4ff;
+  color: var(--universalprimarytextcolor);
   letter-spacing: -1px;
   margin-bottom: 56px;
 }
@@ -483,26 +481,26 @@ function logout() {
 }
 .card:hover .card__icon-wrap { transform: scale(1.08) rotate(-3deg); }
 .card__arrow {
-  color: rgba(255,255,255,0.2);
+  color: var(--universalsecondarytextcolor);
   transition: all 0.3s;
   margin-top: 4px;
 }
 .card:hover .card__arrow {
-  color: rgba(255,255,255,0.6);
+  color: var(--universalprimarytextcolor);
   transform: translate(3px, -3px);
 }
 
 .card__title {
-  font-family: 'Sora', sans-serif;
+  font-family: var(--universalfontstyle);
   font-size: 22px;
   font-weight: 600;
-  color: #f0f4ff;
+  color: var(--universalprimarytextcolor);
   letter-spacing: -0.5px;
   margin-bottom: 12px;
 }
 .card__desc {
   font-size: 15px;
-  color: rgba(255,255,255,0.38);
+  color: var(--universalsecondarytextcolor);
   line-height: 1.65;
   font-weight: 300;
   margin-bottom: 28px;
@@ -510,7 +508,7 @@ function logout() {
 .card__tags { display: flex; gap: 8px; flex-wrap: wrap; }
 .tag {
   font-size: 11.5px;
-  color: rgba(255,255,255,0.35);
+  color: var(--universalsecondarytextcolor);
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.07);
   border-radius: 100px;
@@ -520,7 +518,7 @@ function logout() {
 }
 .card:hover .tag {
   background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.55);
+  color: var(--universalprimarytextcolor);
 }
 
 /* ── FOOTER ── */
@@ -539,12 +537,12 @@ function logout() {
 }
 .footer__brand {
   display: flex; align-items: center; gap: 8px;
-  font-family: 'Sora', sans-serif;
+  font-family: var(--universalfontstyle);
   font-size: 14px;
   font-weight: 600;
-  color: rgba(255,255,255,0.4);
+  color: var(--universalsecondarytextcolor);
 }
-.footer__copy { font-size: 12.5px; color: rgba(255,255,255,0.2); }
+.footer__copy { font-size: 12.5px; color: var(--universalsecondarytextcolor); opacity: 0.5; }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 600px) {
