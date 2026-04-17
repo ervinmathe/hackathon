@@ -14,7 +14,8 @@ import router from './router';
 
 <style>
 :root {
-  --universalbackgrounbcolor: rgb(18, 18, 18);
+  --universalbackgrounbcolor: #090c11;
+  --universalsecondarybackgroundcolor: #0d1117;
   --universalprimarytextcolor: #E6EAF0;
   --universalsecondarytextcolor: #9AA4B2;
   --universalaccentcolor: #6DA8FF;
@@ -22,8 +23,13 @@ import router from './router';
   --universallogouttextcolor: #DA2C38;
 }
 
+html {
+  scroll-behavior: smooth;
+}
 
 body {
+  margin: 0;
+  padding: 0;
   background-color: var(--universalbackgrounbcolor);
   color: var(--universaltextcolor);
   font-family: var(--universalfontstyle);
