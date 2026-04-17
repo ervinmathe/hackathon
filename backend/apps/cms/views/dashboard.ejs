@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hackathon Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <style>
+        .section { margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    </style>
+</head>
+<body>
+    <nav class="container-fluid">
+        <ul>
+            <li><strong>Hackathon CMS Admin</strong></li>
+        </ul>
+        <ul>
+            <li><a href="/logout" class="secondary">Kijelentkezés</a></li>
+        </ul>
+    </nav>
+    <main class="container">
+        
+        <!-- SZAKOK (ENROLLMENTS) -->
+        <section class="section">
+            <div class="grid">
+                <div>
+                    <h3>Szakok</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Név</th>
+                                <th>Művelet</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% enrollments.forEach(e => { %>
+                                <tr>
+                                    <td><%= e.name %></td>
+                                    <td><button class="outline contrast" onclick="deleteItem('enrollments', '<%= e.id %>')">Törlés</button></td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <div>
+                    <h3>Új szak hozzáadása</h3>
+                    <form onsubmit="handleCreate(event, 'enrollments')">
+                        <input type="text" name="name" placeholder="Szak neve" required>
+                        <textarea name="description" placeholder="Leírás"></textarea>
+                        <button type="submit">Hozzáadás</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- TANTÁRGYAK (FORUMS) -->
+        <section class="section">
+            <div class="grid">
+                <div>
+                    <h3>Tantárgyak / Fórumok</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Név</th>
+                                <th>Szak</th>
+                                <th>Művelet</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% forums.forEach(f => { 
+                                const enrollment = enrollments.find(e => e.id === f.enrollment_id);
+                            %>
+                                <tr>
+                                    <td><%= f.name %></td>
+                                    <td><%= enrollment ? enrollment.name : 'Ismeretlen' %></td>
+                                    <td><button class="outline contrast" onclick="deleteItem('forums', '<%= f.id %>')">Törlés</button></td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <div>
+                    <h3>Új tantárgy hozzáadása</h3>
+                    <form onsubmit="handleCreate(event, 'forums')">
+                        <input type="text" name="name" placeholder="Tantárgy neve" required>
+                        <select name="enrollment_id" required>
+                            <option value="" disabled selected>Válassz szakot...</option>
+                            <% enrollments.forEach(e => { %>
+                                <option value="<%= e.id %>"><%= e.name %></option>
+                            <% }) %>
+                        </select>
+                        <textarea name="description" placeholder="Leírás"></textarea>
+                        <button type="submit">Hozzáadás</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- FELHASZNÁLÓK -->
+        <section class="section">
+            <h3>Felhasználók</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Felhasználónév</th>
+                        <th>Email</th>
+                        <th>Szak</th>
+                        <th>Év</th>
+                        <th>Művelet</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% users.forEach(u => { 
+                        const enrollment = enrollments.find(e => e.id === u.enrollment_id);
+                    %>
+                        <tr>
+                            <td><%= u.username %></td>
+                            <td><%= u.email %></td>
+                            <td><%= enrollment ? enrollment.name : '-' %></td>
+                            <td><%= u.year || '-' %></td>
+                            <td><button class="outline contrast" onclick="deleteItem('users', '<%= u.id %>')">Törlés</button></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- POSZTOK -->
+        <section class="section">
+            <h3>Összes Poszt / Jegyzet</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cím</th>
+                        <th>Tantárgy</th>
+                        <th>Szerző</th>
+                        <th>Dátum</th>
+                        <th>Művelet</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% posts.forEach(p => { %>
+                        <tr>
+                            <td><%= p.title %></td>
+                            <td><%= p.forum_name %></td>
+                            <td><%= p.author_name %></td>
+                            <td><%= new Date(p.created_at).toLocaleDateString() %></td>
+                            <td><button class="outline contrast" onclick="deleteItem('posts', '<%= p.id %>')">Törlés</button></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </section>
+
+    </main>
+
+    <script>
+        async function deleteItem(resource, id) {
+            if (!confirm('Biztosan törölni szeretnéd?')) return;
+            const res = await fetch(`/admin/${resource}/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                location.reload();
+            } else {
+                alert('Hiba történt a törlés során.');
+            }
+        }
+
+        async function handleCreate(event, resource) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData.entries());
+
+            const res = await fetch(`/admin/${resource}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                location.reload();
+            } else {
+                const err = await res.json();
+                alert('Hiba: ' + (err.message || 'Ismeretlen hiba'));
+            }
+        }
+    </script>
+</body>
+</html>

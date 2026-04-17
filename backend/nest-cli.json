@@ -45,6 +45,15 @@
       "compilerOptions": {
         "tsConfigPath": "libs/database/tsconfig.lib.json"
       }
+    },
+    "mobile-api": {
+      "type": "application",
+      "root": "apps/mobile-api",
+      "entryFile": "main",
+      "sourceRoot": "apps/mobile-api/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mobile-api/tsconfig.app.json"
+      }
     }
   }
 }
