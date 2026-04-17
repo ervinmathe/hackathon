@@ -119,4 +119,23 @@ export class CmsController {
   async deleteComment(@Param('id') id: string) {
     return this.cmsService.deleteComment(id);
   }
+
+  // --- Calendar Moderation ---
+  @Get('events')
+  @ApiOperation({ summary: 'Admin: List all events' })
+  async getAllEvents() {
+    return this.cmsService.getAllEvents();
+  }
+
+  @Patch('events/:id/approve')
+  @ApiOperation({ summary: 'Admin: Approve an event' })
+  async approveEvent(@Param('id') id: string) {
+    return this.cmsService.approveEvent(id);
+  }
+
+  @Delete('events/:id')
+  @ApiOperation({ summary: 'Admin: Delete an event' })
+  async deleteEvent(@Param('id') id: string) {
+    return this.cmsService.deleteEvent(id);
+  }
 }

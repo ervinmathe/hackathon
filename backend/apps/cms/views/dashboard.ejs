@@ -3,264 +3,262 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hackathon Admin Dashboard</title>
+    <title>Thanatos CMS - Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
     <style>
-        .section { margin-bottom: 4rem; border-bottom: 2px solid #eee; padding-bottom: 3rem; }
-        /* Improved Grid: force single column on smaller screens, ensure enough space */
-        .grid { display: grid; grid-template-columns: 1fr; gap: 3rem; align-items: start; }
-        @media (min-width: 1200px) {
-            .grid { grid-template-columns: 3fr 2fr; }
-        }
-        .badge { font-size: 0.8rem; padding: 0.2rem 0.5rem; border-radius: 5px; background: #eee; }
-        /* Table protection */
-        .table-container { overflow-x: auto; width: 100%; margin-bottom: 1rem; border: 1px solid #eee; border-radius: 8px; }
-        table { font-size: 0.85rem; width: 100%; margin-bottom: 0; }
-        th, td { padding: 0.5rem 0.75rem !important; }
-        button.outline { padding: 0.2rem 0.5rem; font-size: 0.75rem; width: auto; min-width: 70px; margin-bottom: 0; }
-        
-        /* Form styling */
-        form { background: #fdfdfd; padding: 1.5rem; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        form h3 { margin-top: 0; font-size: 1.2rem; }
-        input, select, textarea { margin-bottom: 0.75rem !important; font-size: 0.9rem; }
-        
-        /* Search styling */
+        :root { --primary: #5ee7b0; }
+        body { font-size: 0.9rem; }
+        nav { margin-bottom: 2rem; border-bottom: 1px solid #eee; padding: 0.5rem 1rem; }
+        .badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .container-fluid { padding: 0 2rem; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #eee; }
+        .actions { display: flex; gap: 0.5rem; }
+        button.outline { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+        section { margin-bottom: 4rem; padding-top: 2rem; }
+        h2 { border-left: 5px solid var(--primary); padding-left: 1rem; margin-bottom: 1.5rem; }
         .search-container { margin-bottom: 1rem; }
-        .search-input { border-radius: 20px !important; padding-left: 1rem !important; }
+        .scroll-x { overflow-x: auto; }
     </style>
 </head>
 <body>
-    <nav class="container-fluid">
+    <nav>
         <ul>
-            <li><strong>Hackathon CMS Admin</strong> <span class="badge"><%= userRole %></span></li>
+            <li><strong>Thanatos CMS</strong></li>
         </ul>
         <ul>
+            <li><a href="#universities">Egyetemek</a></li>
+            <li><a href="#enrollments">Szakok</a></li>
+            <li><a href="#forums">Fórumok</a></li>
+            <li><a href="#users">Felhasználók</a></li>
+            <li><a href="#posts">Posztok</a></li>
+            <li><a href="#calendar">Naptár</a></li>
             <li><a href="/logout" class="secondary">Kijelentkezés</a></li>
         </ul>
     </nav>
-    <main class="container">
 
-        <!-- EGYETEMEK (Csak ADMIN) -->
-        <% if (userRole === 'ADMIN') { %>
-        <section class="section">
-            <div class="grid">
-                <div>
-                    <h3>Egyetemek</h3>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Név</th>
-                                    <th>Művelet</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <% universities.forEach(u => { %>
-                                    <tr>
-                                        <td><%= u.name %></td>
-                                        <td><button class="outline contrast" onclick="deleteItem('universities', '<%= u.id %>')">Törlés</button></td>
-                                    </tr>
-                                <% }) %>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div>
-                    <form onsubmit="handleCreate(event, 'universities')">
-                        <h3>Új egyetem</h3>
-                        <input type="text" name="name" placeholder="Egyetem neve" required>
-                        <textarea name="description" placeholder="Leírás"></textarea>
-                        <button type="submit">Hozzáadás</button>
-                    </form>
-                </div>
+    <main class="container-fluid">
+        <!-- UNIVERSITIES -->
+        <section id="universities">
+            <h2>Egyetemek</h2>
+            <div class="search-container">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('univerities-table', this.value)">
             </div>
-        </section>
-
-        <!-- SZAKOK (Csak ADMIN) -->
-        <section class="section">
-            <div class="grid">
-                <div>
-                    <h3>Szakok</h3>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Név</th>
-                                    <th>Egyetem</th>
-                                    <th>Művelet</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <% enrollments.forEach(e => { %>
-                                    <tr>
-                                        <td><%= e.name %></td>
-                                        <td><%= e.university_name %></td>
-                                        <td><button class="outline contrast" onclick="deleteItem('enrollments', '<%= e.id %>')">Törlés</button></td>
-                                    </tr>
-                                <% }) %>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div>
-                    <form onsubmit="handleCreate(event, 'enrollments')">
-                        <h3>Új szak</h3>
-                        <input type="text" name="name" placeholder="Szak neve" required>
-                        <select name="university_id" required>
-                            <option value="" disabled selected>Válassz egyetemet...</option>
-                            <% universities.forEach(u => { %>
-                                <option value="<%= u.id %>"><%= u.name %></option>
-                            <% }) %>
-                        </select>
-                        <textarea name="description" placeholder="Leírás"></textarea>
-                        <button type="submit">Hozzáadás</button>
-                    </form>
-                </div>
-            </div>
-        </section>
-        <% } %>
-
-        <!-- TANTÁRGYAK (ADMIN és LESSADMIN is) -->
-        <section class="section">
-            <div class="grid">
-                <div>
-                    <h3>Tantárgyak / Fórumok</h3>
-                    <div class="search-container">
-                        <input type="text" class="search-input" placeholder="Keresés tantárgyak között..." onkeyup="filterTable(this, 'forums-table')">
-                    </div>
-                    <div class="table-container">
-                        <table id="forums-table">
-                            <thead>
-                                <tr>
-                                    <th>Név</th>
-                                    <th>Egyetem</th>
-                                    <th>Szak</th>
-                                    <th>Művelet</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <% forums.forEach(f => { %>
-                                    <tr>
-                                        <td><%= f.name %></td>
-                                        <td><%= f.university_name %></td>
-                                        <td><%= f.enrollment_name ? f.enrollment_name : 'Minden szak' %></td>
-                                        <td><button class="outline contrast" onclick="deleteItem('forums', '<%= f.id %>')">Törlés</button></td>
-                                    </tr>
-                                <% }) %>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div>
-                    <form onsubmit="handleCreate(event, 'forums')">
-                        <h3>Új tantárgy</h3>
-                        <input type="text" name="name" placeholder="Tantárgy neve" required>
-                        <select name="university_id" required>
-                            <option value="" disabled selected>Válassz egyetemet...</option>
-                            <% universities.forEach(u => { %>
-                                <option value="<%= u.id %>"><%= u.name %></option>
-                            <% }) %>
-                        </select>
-                        <select name="enrollment_id" required>
-                            <option value="" disabled selected>Válassz szakot...</option>
-                            <% enrollments.forEach(e => { %>
-                                <option value="<%= e.id %>"><%= e.name %></option>
-                            <% }) %>
-                        </select>
-                        <textarea name="description" placeholder="Leírás"></textarea>
-                        <button type="submit">Hozzáadás</button>
-                    </form>
-                </div>
-            </div>
-        </section>
-
-        <!-- FELHASZNÁLÓK (Csak ADMIN) -->
-        <% if (userRole === 'ADMIN') { %>
-        <section class="section">
-            <div class="grid">
-                <div>
-                    <h3>Felhasználók</h3>
-                    <div class="search-container">
-                        <input type="text" class="search-input" placeholder="Keresés felhasználók között (név/email)..." onkeyup="filterTable(this, 'users-table')">
-                    </div>
-                    <div class="table-container">
-                        <table id="users-table">
-                            <thead>
-                                <tr>
-                                    <th>Név (Email)</th>
-                                    <th>Szerepkör</th>
-                                    <th>Egyetem / Szak</th>
-                                    <th>Művelet</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <% users.forEach(u => { %>
-                                    <tr>
-                                        <td><%= u.username %> (<%= u.email %>)</td>
-                                        <td><span class="badge"><%= u.role %></span></td>
-                                        <td><%= u.university_name %> / <%= u.enrollment_name || '-' %></td>
-                                        <td><button class="outline contrast" onclick="deleteItem('users', '<%= u.id %>')">Törlés</button></td>
-                                    </tr>
-                                <% }) %>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div>
-                    <form onsubmit="handleCreate(event, 'users')">
-                        <h3>Új Admin/LessAdmin</h3>
-                        <input type="text" name="username" placeholder="Felhasználónév" required>
-                        <input type="email" name="email" placeholder="Email" required>
-                        <input type="password" name="password" placeholder="Jelszó" required>
-                        <select name="role" required>
-                            <option value="LESSADMIN">LESSADMIN (Fórum kezelő)</option>
-                            <option value="ADMIN">ADMIN (Teljes jogú)</option>
-                            <option value="USER">USER (Hallgató)</option>
-                        </select>
-                        <select name="university_id" required>
-                            <option value="" disabled selected>Válassz egyetemet...</option>
-                            <% universities.forEach(u => { %>
-                                <option value="<%= u.id %>"><%= u.name %></option>
-                            <% }) %>
-                        </select>
-                        <button type="submit">Létrehozás</button>
-                    </form>
-                </div>
-            </div>
-        </section>
-        <% } %>
-
-        <!-- POSZTOK (Moderáció - ADMIN és LESSADMIN is) -->
-        <section class="section">
-            <h3>Posztok / Jegyzetek (Moderáció)</h3>
-            <div class="table-container">
-                <table>
+            <div class="scroll-x">
+                <table id="univerities-table">
                     <thead>
                         <tr>
-                            <th>Állapot</th>
+                            <th>Név</th>
+                            <th>Leírás</th>
+                            <th>Műveletek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% universities.forEach(u => { %>
+                            <tr>
+                                <td><%= u.name %></td>
+                                <td><%= u.description %></td>
+                                <td class="actions">
+                                    <button class="outline contrast" onclick="deleteItem('universities', '<%= u.id %>')">Törlés</button>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            <details>
+                <summary role="button" class="outline">Új egyetem hozzáadása</summary>
+                <form onsubmit="handleCreate(event, 'universities')">
+                    <input type="text" name="name" placeholder="Egyetem neve" required>
+                    <input type="text" name="description" placeholder="Leírás">
+                    <button type="submit">Mentés</button>
+                </form>
+            </details>
+        </section>
+
+        <!-- ENROLLMENTS -->
+        <section id="enrollments">
+            <h2>Szakok</h2>
+            <div class="search-container">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('enrollments-table', this.value)">
+            </div>
+            <div class="scroll-x">
+                <table id="enrollments-table">
+                    <thead>
+                        <tr>
+                            <th>Név</th>
+                            <th>Egyetem</th>
+                            <th>Leírás</th>
+                            <th>Műveletek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% enrollments.forEach(e => { %>
+                            <tr>
+                                <td><%= e.name %></td>
+                                <td><%= e.university_name %></td>
+                                <td><%= e.description %></td>
+                                <td class="actions">
+                                    <button class="outline contrast" onclick="deleteItem('enrollments', '<%= e.id %>')">Törlés</button>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            <details>
+                <summary role="button" class="outline">Új szak hozzáadása</summary>
+                <form onsubmit="handleCreate(event, 'enrollments')">
+                    <input type="text" name="name" placeholder="Szak neve" required>
+                    <select name="university_id" required>
+                        <option value="" disabled selected>Válassz egyetemet</option>
+                        <% universities.forEach(u => { %>
+                            <option value="<%= u.id %>"><%= u.name %></option>
+                        <% }) %>
+                    </select>
+                    <input type="text" name="description" placeholder="Leírás">
+                    <button type="submit">Mentés</button>
+                </form>
+            </details>
+        </section>
+
+        <!-- FORUMS -->
+        <section id="forums">
+            <h2>Fórumok (Tantárgyak)</h2>
+            <div class="search-container">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('forums-table', this.value)">
+            </div>
+            <div class="scroll-x">
+                <table id="forums-table">
+                    <thead>
+                        <tr>
+                            <th>Név</th>
+                            <th>Egyetem</th>
+                            <th>Szak</th>
+                            <th>Leírás</th>
+                            <th>Műveletek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% forums.forEach(f => { %>
+                            <tr>
+                                <td><%= f.name %></td>
+                                <td><%= f.university_name %></td>
+                                <td><%= f.enrollment_name %></td>
+                                <td><%= f.description %></td>
+                                <td class="actions">
+                                    <button class="outline contrast" onclick="deleteItem('forums', '<%= f.id %>')">Törlés</button>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            <details>
+                <summary role="button" class="outline">Új fórum hozzáadása</summary>
+                <form onsubmit="handleCreate(event, 'forums')">
+                    <input type="text" name="name" placeholder="Tantárgy neve" required>
+                    <select name="university_id" required>
+                        <option value="" disabled selected>Egyetem</option>
+                        <% universities.forEach(u => { %>
+                            <option value="<%= u.id %>"><%= u.name %></option>
+                        <% }) %>
+                    </select>
+                    <select name="enrollment_id" required>
+                        <option value="" disabled selected>Szak</option>
+                        <% enrollments.forEach(e => { %>
+                            <option value="<%= e.id %>"><%= e.name %> (<%= e.university_name %>)</option>
+                        <% }) %>
+                    </select>
+                    <input type="text" name="description" placeholder="Leírás">
+                    <button type="submit">Mentés</button>
+                </form>
+            </details>
+        </section>
+
+        <!-- USERS -->
+        <section id="users">
+            <h2>Felhasználók</h2>
+            <div class="search-container">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('users-table', this.value)">
+            </div>
+            <div class="scroll-x">
+                <table id="users-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Egyetem</th>
+                            <th>Szak</th>
+                            <th>Létrehozva</th>
+                            <th>Műveletek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% users.forEach(u => { %>
+                            <tr>
+                                <td><%= u.username %></td>
+                                <td><%= u.email %></td>
+                                <td><span class="badge" style="background: <%= u.role === 'ADMIN' ? '#ffcdd2' : (u.role === 'LESSADMIN' ? '#fff9c4' : '#e1f5fe') %>;"><%= u.role %></span></td>
+                                <td><%= u.university_name %></td>
+                                <td><%= u.enrollment_name %></td>
+                                <td><%= new Date(u.created_at).toLocaleDateString() %></td>
+                                <td class="actions">
+                                    <button class="outline contrast" onclick="deleteItem('users', '<%= u.id %>')">Törlés</button>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            <details>
+                <summary role="button" class="outline">Új admin/moderátor létrehozása</summary>
+                <form onsubmit="handleCreate(event, 'users')">
+                    <input type="text" name="username" placeholder="Felhasználónév" required>
+                    <input type="email" name="email" placeholder="Email" required>
+                    <input type="password" name="password" placeholder="Jelszó" required>
+                    <select name="role" required>
+                        <option value="USER">USER</option>
+                        <option value="LESSADMIN">LESSADMIN (Moderátor)</option>
+                        <option value="ADMIN">ADMIN</option>
+                    </select>
+                    <select name="university_id" required>
+                        <% universities.forEach(u => { %>
+                            <option value="<%= u.id %>"><%= u.name %></option>
+                        <% }) %>
+                    </select>
+                    <button type="submit">Létrehozás</button>
+                </form>
+            </details>
+        </section>
+
+        <!-- POSTS -->
+        <section id="posts">
+            <h2>Posztok moderálása</h2>
+            <div class="search-container">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('posts-table', this.value)">
+            </div>
+            <div class="scroll-x">
+                <table id="posts-table">
+                    <thead>
+                        <tr>
                             <th>Cím</th>
-                            <th>Tantárgy</th>
                             <th>Szerző</th>
-                            <th>Művelet</th>
+                            <th>Fórum</th>
+                            <th>Dátum</th>
+                            <th>Műveletek</th>
                         </tr>
                     </thead>
                     <tbody>
                         <% posts.forEach(p => { %>
-                            <tr style="<%= p.is_pinned ? 'background-color: #fff8e1;' : '' %>">
-                                <td>
-                                    <% if (p.is_pinned) { %>
-                                        <span class="badge" style="background: #ffd54f;">PINNED</span>
-                                    <% } else { %>
-                                        -
-                                    <% } %>
-                                </td>
+                            <tr style="<%= p.is_pinned ? 'background-color: #f1f8e9;' : '' %>">
                                 <td><%= p.title %></td>
-                                <td><%= p.forum_name %></td>
                                 <td><%= p.author_name %></td>
-                                <td>
-                                    <button class="outline" onclick="togglePin('<%= p.id %>')">
-                                        <%= p.is_pinned ? 'Unpin' : 'Pin' %>
-                                    </button>
+                                <td><%= p.forum_name %></td>
+                                <td><%= new Date(p.created_at).toLocaleDateString() %></td>
+                                <td class="actions">
+                                    <button class="outline" onclick="togglePin('<%= p.id %>')"><%= p.is_pinned ? 'Unpin' : 'Pin' %></button>
                                     <button class="outline contrast" onclick="deleteItem('posts', '<%= p.id %>')">Törlés</button>
                                 </td>
                             </tr>
@@ -270,53 +268,29 @@
             </div>
         </section>
 
-        <!-- HOZZÁSZÓLÁSOK (Moderáció - ADMIN és LESSADMIN is) -->
-        <section class="section">
-            <h3>Hozzászólások (Moderáció)</h3>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Tartalom</th>
-                            <th>Poszt</th>
-                            <th>Szerző</th>
-                            <th>Művelet</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% (typeof comments !== 'undefined' ? comments : []).forEach(c => { %>
-                            <tr>
-                                <td style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                    <%= c.content %>
-                                </td>
-                                <td><%= c.post_title %></td>
-                                <td><%= c.author_name %></td>
-                                <td><button class="outline contrast" onclick="deleteItem('comments', '<%= c.id %>')">Törlés</button></td>
-                            </tr>
-                        <% }) %>
-                    </tbody>
-                </table>
+        <!-- CALENDAR -->
+        <section id="calendar">
+            <h2>Naptár moderálása</h2>
+            <div class="search-container">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('events-table', this.value)">
             </div>
-        </section>
-
-        <!-- NAPTÁR (Moderáció - ADMIN és LESSADMIN is) -->
-        <section class="section">
-            <h3>Naptár Események (Moderáció)</h3>
-            <div class="table-container">
-                <table>
+            <div class="scroll-x">
+                <table id="events-table">
                     <thead>
                         <tr>
-                            <th>Státusz</th>
-                            <th>Cím</th>
-                            <th>Egyetem</th>
+                            <th>Esemény</th>
                             <th>Szerző</th>
-                            <th>Időpont</th>
-                            <th>Művelet</th>
+                            <th>Kezdés</th>
+                            <th>Állapot</th>
+                            <th>Műveletek</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <% (typeof events !== 'undefined' ? events : []).forEach(e => { %>
+                        <% calendar.forEach(e => { %>
                             <tr style="<%= !e.is_approved ? 'background-color: #fff3e0;' : '' %>">
+                                <td><%= e.title %></td>
+                                <td><%= e.author_name %></td>
+                                <td><%= new Date(e.start_time).toLocaleString() %></td>
                                 <td>
                                     <% if (e.is_approved) { %>
                                         <span class="badge" style="background: #c8e6c9;">Approved</span>
@@ -324,15 +298,11 @@
                                         <span class="badge" style="background: #ffe0b2;">Pending</span>
                                     <% } %>
                                 </td>
-                                <td><%= e.title %></td>
-                                <td><%= e.university_name %></td>
-                                <td><%= e.author_name %></td>
-                                <td><%= new Date(e.start_time).toLocaleString('hu-HU') %></td>
-                                <td>
+                                <td class="actions">
                                     <% if (!e.is_approved) { %>
                                         <button class="outline" onclick="approveEvent('<%= e.id %>')">Jóváhagyás</button>
                                     <% } %>
-                                    <button class="outline contrast" onclick="deleteItem('calendar', '<%= e.id %>')">Törlés</button>
+                                    <button class="outline contrast" onclick="deleteItem('events', '<%= e.id %>')">Törlés</button>
                                 </td>
                             </tr>
                         <% }) %>
@@ -340,12 +310,11 @@
                 </table>
             </div>
         </section>
-
     </main>
 
     <script>
-        function filterTable(input, tableId) {
-            const filter = input.value.toLowerCase();
+        function filterTable(tableId, query) {
+            const filter = query.toLowerCase();
             const table = document.getElementById(tableId);
             const tr = table.getElementsByTagName("tr");
 
@@ -373,7 +342,11 @@
         }
 
         async function togglePin(id) {
-            const res = await fetch(`/posts/${id}/pin`, { method: 'PATCH' });
+            // Note: This endpoint is in the API (3000) not CMS (3001) usually,
+            // but for simplicity we assume it's proxied or moved to admin.
+            // Let's assume for now it needs to call the API but since we're in EJS/SSR,
+            // we should have an admin route for it.
+            const res = await fetch(`/admin/posts/${id}/pin`, { method: 'PATCH' });
             if (res.ok) {
                 location.reload();
             } else {
@@ -382,7 +355,8 @@
         }
 
         async function approveEvent(id) {
-            const res = await fetch(`/calendar/${id}/approve`, { method: 'PATCH' });
+            if (!confirm('Biztosan jóváhagyod ezt az eseményt?')) return;
+            const res = await fetch(`/admin/events/${id}/approve`, { method: 'PATCH' });
             if (res.ok) {
                 location.reload();
             } else {

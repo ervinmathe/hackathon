@@ -32,7 +32,7 @@ export class CmsGuiController {
       users,
       posts,
       comments,
-      events,
+      calendar: events,
       userRole: session.userRole,
     });
   }

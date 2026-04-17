@@ -81,6 +81,10 @@ const fetchEvents = async () => {
   }
 }
 
+const handleLogout = () => {
+  authStore.logout(router)
+}
+
 const toggleInterest = async (event) => {
   try {
     const userId = authStore.user?.id
@@ -296,6 +300,10 @@ onMounted(() => {
       </div>
       <div class="navbar__right">
         <div class="role-badge" v-if="authStore.user">{{ authStore.user.role }}</div>
+        <button class="signout-btn-nav" @click="handleLogout">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign Out
+        </button>
         <div class="avatar"><span>{{ authStore.user?.username?.charAt(0).toUpperCase() || 'U' }}</span></div>
       </div>
     </nav>
@@ -600,6 +608,14 @@ onMounted(() => {
 .brand-divider { color: rgba(255,255,255,0.1); margin: 0 4px; }
 .brand-sub { color: rgba(255,255,255,0.4); }
 .role-badge { font-size: 10px; font-weight: 700; color: #3b9eff; background: rgba(59, 158, 255, 0.1); padding: 4px 10px; border-radius: 100px; margin-right: 12px; border: 1px solid rgba(59, 158, 255, 0.2); }
+.signout-btn-nav {
+  display: flex; align-items: center; gap: 6px;
+  background: none; border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.4); font-size: 12px; padding: 6px 12px;
+  border-radius: 8px; cursor: pointer; margin-right: 12px;
+  transition: all 0.2s;
+}
+.signout-btn-nav:hover { background: rgba(239, 68, 68, 0.1); color: #f87171; border-color: rgba(239, 68, 68, 0.2); }
 .avatar { width: 34px; height: 34px; border-radius: 50%; background: #1e2d45; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); }
 
 /* LAYOUT */

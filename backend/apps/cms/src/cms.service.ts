@@ -148,4 +148,19 @@ export class CmsService {
       .select('calendar_events.*', 'users.username as author_name', 'universities.name as university_name')
       .orderBy('calendar_events.start_time', 'asc');
   }
+
+  async approveEvent(id: string) {
+    const [event] = await this.knex('calendar_events')
+      .where({ id })
+      .update({ is_approved: true })
+      .returning('*');
+    if (!event) throw new NotFoundException('Event not found');
+    return event;
+  }
+
+  async deleteEvent(id: string) {
+    const deletedCount = await this.knex('calendar_events').where({ id }).del();
+    if (deletedCount === 0) throw new NotFoundException('Event not found');
+    return { success: true };
+  }
 }

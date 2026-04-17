@@ -7,8 +7,21 @@ const router = useRouter()
 const authStore = useAuthStore()
 const activeTab = ref('login')
 const sliding = ref(false)
+// Error & Loading
 const error = ref('')
 const loading = ref(false)
+
+// Input Refs for focus management
+const loginPassRef = ref(null)
+const regEmailRef = ref(null)
+const regPassRef = ref(null)
+const regConfirmRef = ref(null)
+
+const focusNext = (nextRef) => {
+  if (nextRef && nextRef.focus) {
+    nextRef.focus()
+  }
+}
 
 // Login fields
 const loginEmail = ref('')
@@ -127,14 +140,14 @@ const slideOffset = computed(() => {
                   <label class="field__label">Email</label>
                   <div class="field__wrap">
                     <svg class="field__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
-                    <input v-model="loginEmail" type="email" placeholder="you@example.com" class="field__input" />
+                    <input v-model="loginEmail" type="email" placeholder="you@example.com" class="field__input" @keyup.enter="focusNext(loginPassRef)" />
                   </div>
                 </div>
                 <div class="field">
                   <label class="field__label">Password</label>
                   <div class="field__wrap">
                     <svg class="field__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    <input v-model="loginPassword" type="password" placeholder="••••••••" class="field__input" />
+                    <input ref="loginPassRef" v-model="loginPassword" type="password" placeholder="••••••••" class="field__input" @keyup.enter="handleLogin" />
                   </div>
                 </div>
                 <div class="field__row">
@@ -171,28 +184,28 @@ const slideOffset = computed(() => {
                   <label class="field__label">Full Name</label>
                   <div class="field__wrap">
                     <svg class="field__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-                    <input v-model="regName" type="text" placeholder="Your name" class="field__input" />
+                    <input v-model="regName" type="text" placeholder="Your name" class="field__input" @keyup.enter="focusNext(regEmailRef)" />
                   </div>
                 </div>
                 <div class="field">
                   <label class="field__label">Email</label>
                   <div class="field__wrap">
                     <svg class="field__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
-                    <input v-model="regEmail" type="email" placeholder="you@example.com" class="field__input" />
+                    <input ref="regEmailRef" v-model="regEmail" type="email" placeholder="you@example.com" class="field__input" @keyup.enter="focusNext(regPassRef)" />
                   </div>
                 </div>
                 <div class="field">
                   <label class="field__label">Password</label>
                   <div class="field__wrap">
                     <svg class="field__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    <input v-model="regPassword" type="password" placeholder="Min. 8 characters" class="field__input" />
+                    <input ref="regPassRef" v-model="regPassword" type="password" placeholder="Min. 8 characters" class="field__input" @keyup.enter="focusNext(regConfirmRef)" />
                   </div>
                 </div>
                 <div class="field">
                   <label class="field__label">Confirm Password</label>
                   <div class="field__wrap">
                     <svg class="field__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 13c0 5-3.5 7.5-8 8.5C7.5 20.5 4 18 4 13V6l8-3 8 3v7z"/></svg>
-                    <input v-model="regConfirm" type="password" placeholder="••••••••" class="field__input" />
+                    <input ref="regConfirmRef" v-model="regConfirm" type="password" placeholder="••••••••" class="field__input" @keyup.enter="handleRegister" />
                   </div>
                 </div>
               </div>

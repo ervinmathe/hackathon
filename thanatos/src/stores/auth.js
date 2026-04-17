@@ -33,12 +33,16 @@ export const useAuthStore = defineStore('auth', {
         throw error
       }
     },
-    logout() {
+    logout(router) {
       this.user = null
       this.isAuthenticated = false
       localStorage.removeItem('user')
-      // Optional: call backend logout if session-based
+      // Call backend logout
       api.post('/auth/logout').catch(() => {})
+      // Redirect if router is provided
+      if (router) {
+        router.push('/')
+      }
     }
   }
 })
