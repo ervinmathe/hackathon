@@ -382,6 +382,9 @@ onBeforeUnmount(() => {
             <span class="event-tag event-tag--active">All Sessions</span>
           </div>
         </template>
+        <div class="sidebar-button-div">
+          <button class="sidebar-btn" @click="router.push('/study-help')">Study with AI</button>
+        </div>
       </aside>
 
       <!-- CONTENT -->
@@ -682,6 +685,8 @@ onBeforeUnmount(() => {
 }
 .tab--active { background: rgba(94, 231, 176, 0.1); color: #5ee7b0; }
 .sidebar__section-label { font-size: 11px; text-transform: uppercase; color: var(--universalsecondarytextcolor); padding: 0 20px 12px; letter-spacing: 1px; opacity: 0.5; }
+.sidebar-button-div { margin: 10px; margin-top: auto; padding-top: 16px; }
+.sidebar-btn { width: 100%; padding: 12px; background: linear-gradient(135deg,#5ee7b0,#3b9eff); border: none; color: #070b12; font-weight: 700; border-radius: 10px; cursor: pointer; font-family: inherit; }
 
 .channel-list { flex: 1; overflow-y: auto; padding: 0 12px; display: flex; flex-direction: column; gap: 4px; }
 .channel-item {
