@@ -15,31 +15,59 @@ export class AuthService {
   }
 
   async register(data: any) {
+    console.log('--- Register Step 1: Data received', data);
     const { username, email, password, university_id, enrollment_id, year } = data;
 
-    const existingUser = await this.knex('users')
-      .where({ email })
-      .orWhere({ username })
-      .first();
+    try {
+      console.log('--- Register Step 2: Checking existing user');
+      const existingUser = await this.knex('users')
+        .where({ email })
+        .orWhere({ username })
+        .first();
 
-    if (existingUser) {
-      throw new ConflictException('Username or email already exists');
+      if (existingUser) {
+        console.log('--- Register Step 2b: User already exists');
+        throw new ConflictException('Username or email already exists');
+      }
+
+      console.log('--- Register Step 3: Hashing password');
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const parsedYear = parseInt(year, 10);
+      const finalYear = isNaN(parsedYear) ? 1 : parsedYear;
+
+      console.log('--- Register Step 4: Resolving university_id');
+      let finalUniversityId = university_id;
+      if (!finalUniversityId) {
+        console.log('--- Register Step 4b: No university_id, fetching first from DB');
+        const firstUni = await this.knex('universities').first();
+        finalUniversityId = firstUni?.id;
+        console.log('--- Register Step 4c: Fallback university found:', finalUniversityId);
+      }
+
+      if (!finalUniversityId) {
+        console.error('--- Register ERROR: No university found in DB to link user to!');
+        throw new ConflictException('Please create a university first in the Admin panel');
+      }
+
+      console.log('--- Register Step 5: Inserting user into DB');
+      const [user] = await this.knex('users')
+        .insert({
+          username,
+          email,
+          password: hashedPassword,
+          university_id: finalUniversityId,
+          enrollment_id: enrollment_id || null,
+          year: finalYear,
+        })
+        .returning(['id', 'username', 'email', 'role', 'university_id', 'enrollment_id', 'profile_url']);
+
+      console.log('--- Register SUCCESS: User created', user.id);
+      return user;
+    } catch (error) {
+      console.error('--- Register FATAL ERROR:', error);
+      throw error;
     }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const [user] = await this.knex('users')
-      .insert({
-        username,
-        email,
-        password: hashedPassword,
-        university_id,
-        enrollment_id,
-        year: parseInt(year, 10),
-      })
-      .returning(['id', 'username', 'email', 'role', 'university_id', 'enrollment_id', 'profile_url']);
-
-    return user;
   }
 
   async login(data: any) {

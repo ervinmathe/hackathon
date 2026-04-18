@@ -70,11 +70,13 @@ const handleRegister = async () => {
   loading.value = true
   error.value = ''
   try {
+    console.log('Starting registration...');
     await authStore.register({
-      username: regName.value, // Mapping 'Full Name' to 'username' for backend
+      username: regName.value,
       email: regEmail.value,
       password: regPassword.value
     })
+    console.log('Registration successful, redirecting...');
     router.replace('/home')
   } catch (err) {
     error.value = err.response?.data?.message || 'Registration failed.'

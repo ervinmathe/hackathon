@@ -22,9 +22,9 @@ export const useAuthStore = defineStore('auth', {
     async register(userData) {
       try {
         const response = await api.post('/auth/register', userData)
-        // Auto-login after register if backend returns user/session
-        if (response.data.user) {
-          this.user = response.data.user
+        // A backend közvetlenül a user objektumot adja vissza
+        if (response.data && response.data.id) {
+          this.user = response.data
           this.isAuthenticated = true
           localStorage.setItem('user', JSON.stringify(this.user))
         }
