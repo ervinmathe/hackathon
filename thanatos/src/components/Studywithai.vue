@@ -3,6 +3,13 @@ import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import api from '../api/api'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+
+const renderMarkdown = (text) => {
+  if (!text) return ''
+  return DOMPurify.sanitize(marked.parse(text))
+}
 
 // ─── BACKEND URLS ──────────────────────────────────────────────────────────────
 // Replace these with your actual backend endpoints
@@ -430,7 +437,8 @@ function resetToQuestions() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5ee7b0" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
               </div>
               <div class="msg-bubble">
-                <p class="msg-text" style="white-space: pre-wrap;">{{ msg.content }}</p>
+                <div v-if="msg.role === 'assistant'" class="msg-text markdown-body" v-html="renderMarkdown(msg.content)"></div>
+                <p v-else class="msg-text" style="white-space: pre-wrap;">{{ msg.content }}</p>
               </div>
             </div>
           </TransitionGroup>
@@ -594,6 +602,17 @@ function resetToQuestions() {
 .message--user .msg-bubble { background: linear-gradient(135deg,rgba(94,231,176,0.15),rgba(59,158,255,0.15)); border: 1px solid rgba(94,231,176,0.2); border-radius: 18px 4px 18px 18px; }
 .message--ai .msg-bubble { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 4px 18px 18px 18px; }
 .msg-text { color: #e8edf5; }
+
+/* Markdown Styles */
+.markdown-body :deep(p) { margin-bottom: 12px; }
+.markdown-body :deep(p:last-child) { margin-bottom: 0; }
+.markdown-body :deep(strong) { font-weight: 600; color: #fff; }
+.markdown-body :deep(ul), .markdown-body :deep(ol) { margin-bottom: 12px; padding-left: 20px; }
+.markdown-body :deep(li) { margin-bottom: 4px; }
+.markdown-body :deep(code) { background: rgba(255,255,255,0.1); padding: 2px 5px; border-radius: 4px; font-family: monospace; font-size: 13.5px; }
+.markdown-body :deep(pre) { background: rgba(0,0,0,0.3); padding: 14px; border-radius: 8px; overflow-x: auto; margin-bottom: 12px; }
+.markdown-body :deep(pre code) { background: none; padding: 0; font-size: 13px; }
+.markdown-body :deep(h1), .markdown-body :deep(h2), .markdown-body :deep(h3), .markdown-body :deep(h4) { margin-top: 16px; margin-bottom: 12px; font-weight: 600; color: #fff; }
 
 .thinking { display: flex; align-items: center; gap: 6px; padding: 16px 20px; }
 .thinking span { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.3); animation: blink 1.2s infinite; }

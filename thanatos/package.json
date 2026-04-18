@@ -19,6 +19,7 @@
     "@googlemaps/js-api-loader": "^2.0.2",
     "@supabase/supabase-js": "^2.103.3",
     "axios": "^1.15.0",
+    "dompurify": "^3.4.0",
     "marked": "^18.0.1",
     "pinia": "^3.0.4",
     "vue": "^3.5.31",
