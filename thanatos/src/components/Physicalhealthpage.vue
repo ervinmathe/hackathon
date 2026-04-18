@@ -14,7 +14,7 @@ function loadGoogleMaps() {
 </script>
 <script setup>
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 ///const center = new LatLng(userCoords.value.lat, userCoords.value.lng)
@@ -26,26 +26,31 @@ const isLoading = ref(false)
 const userCoords = ref(null)
 const locationError = ref(null)
 const places = ref([])
+const searchRadius = ref(20)
+const showDistanceDropdown = ref(false)
+const activityStartHour = ref('08:00')
+const activityEndHour = ref('20:00')
+
 
 const categories = [
-  'All',
-  'Strength',
-  'Cardio',
-  'Sports',
-  'Outdoor',
-  'Recovery',
-  'Group',
-  'Solo'
+    'All',
+    'Strength',
+    'Cardio',
+    'Sports',
+    'Outdoor',
+    'Recovery',
+    'Group',
+    'Solo'
 ]
 
 const placeQueries = {
-  Strength: ['gym', 'fitness center'],
-  Cardio: ['running track', 'stadium', 'fitness center'],
-  Sports: ['football field', 'basketball court', 'sports complex'],
-  Outdoor: ['park', 'hiking area'],
-  Recovery: ['spa', 'wellness center', 'yoga studio'],
-  Group: ['sports club', 'recreation center'],
-  Solo: ['gym', 'running track', 'park']
+    Strength: ['gym', 'fitness center'],
+    Cardio: ['running track', 'stadium', 'fitness center'],
+    Sports: ['football field', 'basketball court', 'sports complex'],
+    Outdoor: ['park', 'hiking area'],
+    Recovery: ['spa', 'wellness center', 'yoga studio'],
+    Group: ['sports club', 'recreation center'],
+    Solo: ['gym', 'running track', 'park']
 }
 
 const events = ref([
@@ -57,7 +62,11 @@ const filteredActivities = computed(() => places.value
 )
 
 
-const performGoogleSearch = async () => {
+const performGoogleSearch = async (filterInterval = null) => {
+    // filterInterval example: { day: 1, openHour: 8, closeHour: 20 }
+    // day: 0=Sun, 1=Mon, ..., 6=
+
+    if (timeRangeInvalid.value) return
     if (!userCoords.value) return
     isLoading.value = true
     locationError.value = null
@@ -67,34 +76,50 @@ const performGoogleSearch = async () => {
 
         const { Place } = await google.maps.importLibrary("places")
 
-        // Calculate a bounding box ~20km around the user
         const lat = userCoords.value.lat
         const lng = userCoords.value.lng
-        const delta = 0.18 // ~20km in degrees
+        const delta = searchRadius.value / 111
 
         const request = {
             textQuery: searchQuery.value || 'gyms and parks',
-            locationRestriction: new google.maps.LatLngBounds(   // ← change this
+            locationRestriction: new google.maps.LatLngBounds(
                 { lat: lat - delta, lng: lng - delta },
                 { lat: lat + delta, lng: lng + delta }
             ),
-            maxResultCount: 15,
+            maxResultCount: 30,
             fields: ['id', 'displayName', 'formattedAddress', 'rating', 'types', 'location', 'photos']
         }
 
         const { places: results } = await Place.searchByText(request)
 
         if (results && results.length > 0) {
-            places.value = await Promise.all(results.map(async (p) => {
+            const mapped = await Promise.all(results.map(async (p) => {
                 let photoUrl = null
+                let openingHours = null
 
                 try {
-                    // Fetch the full place details to get photos
-                    await p.fetchFields({ fields: ['photos'] })
+                    // ✅ Fetch both photos AND opening hours in one call
+                    await p.fetchFields({ fields: ['photos', 'regularOpeningHours'] })
                     photoUrl = p.photos?.[0]?.getURI({ maxWidth: 800 }) ?? null
+                    openingHours = p.regularOpeningHours ?? null
                 } catch (e) {
-                    console.warn('Photo fetch failed for', p.displayName, e)
+                    console.warn('Detail fetch failed for', p.displayName, e)
                 }
+
+                openingHours = p.regularOpeningHours ?? null
+
+                // Replace isOpen() with a manual check
+                const now = new Date()
+                const today = now.getDay()
+                const currentMinutes = now.getHours() * 60 + now.getMinutes()
+
+                const isOpenNow = openingHours?.periods?.some(period => {
+                    if (period.open?.day !== today) return false
+                    const openMin = period.open.hour * 60 + (period.open.minute ?? 0)
+                    const closeMin = period.close?.hour * 60 + (period.close?.minute ?? 0)
+                    return currentMinutes >= openMin && currentMinutes < closeMin
+                }) ?? null
+
                 return {
                     id: p.id,
                     name: p.displayName,
@@ -104,10 +129,26 @@ const performGoogleSearch = async () => {
                     icon: '📍',
                     tags: p.types?.slice(0, 3) || [],
                     color: '#5ee7b0',
-                    photo: photoUrl
+                    photo: photoUrl,
+                    openingHours,
+                    isOpenNow: isOpenNow ?? false
                 }
             }))
 
+            // ✅ Filter by interval if provided
+            places.value = filterInterval
+                ? mapped.filter(place => isOpenDuringInterval(place.openingHours, filterInterval))
+                : mapped
+
+            if (places.value.length === 0) {
+                locationError.value = "No activities found open during that time."
+            } else {
+                places.value.sort((a, b) => {
+                    const ratingA = a.rating !== 'N/A' ? a.rating : 0;
+                    const ratingB = b.rating !== 'N/A' ? b.rating : 0;
+                    return ratingB - ratingA;
+                })
+            }
         } else {
             locationError.value = "No activities found in this area."
         }
@@ -119,7 +160,30 @@ const performGoogleSearch = async () => {
     }
 }
 
+// ✅ Check if a place is open during an entire interval on a given day
+const isOpenDuringInterval = (openingHours, { day, openHour, closeHour }) => {
+    if (!openingHours?.periods) return false  // no data → exclude
+
+    return openingHours.periods.some(period => {
+        const opens = period.open
+        const closes = period.close
+
+        if (!opens || !closes) return false
+        if (opens.day !== day) return false  // wrong day
+
+        // Convert to minutes for easy comparison
+        const placeOpen = opens.hour * 60 + (opens.minute ?? 0)
+        const placeClose = closes.hour * 60 + (closes.minute ?? 0)
+        const wantOpen = openHour * 60
+        const wantClose = closeHour * 60
+
+        // Place must be open for the entire requested interval
+        return placeOpen <= wantOpen && placeClose >= wantClose
+    })
+}
+
 const getLocationAndSearch = () => {
+    if (timeRangeInvalid.value) return
     isLoading.value = true
     if (!navigator.geolocation) {
         locationError.value = "Geolocation not supported"
@@ -155,16 +219,17 @@ onMounted(async () => {
     }
     getLocationAndSearch()
 
-    /*searchQuery.value.addEventListener('input', () => {
-        if (searchQuery.value.trim() === '') {
-            searchQuery.value = 'gyms and parks'
-            
+    watch(searchQuery, (newVal) => {
+        if (newVal.trim() === '') {
+            performGoogleSearch()
+
         }
-    })*/
+    })
 })
 
+
 function openOnMaps(act) {
-    if(!act) return 
+    if (!act) return
     const query = encodeURIComponent(act.name)
     const url = `https://www.google.com/maps/search/?api=1&query=${query}&query_place_id=${act.id}`
     window.open(url, '_blank')
@@ -172,18 +237,54 @@ function openOnMaps(act) {
 
 function setcategoryAndQuerry(cat) {
     selectedCategory.value = cat
-    searchQuery.value = cat === 'All' 
-        ? 'gyms and parks' 
-        : placeQueries[cat].join(',')
+    searchQuery.value = cat === 'All'
+        ? 'gyms and parks'
+        : placeQueries[cat].join(' OR ')
     performGoogleSearch()
 }
+
+function openDistanceDroppdown() {
+    showDistanceDropdown.value = !showDistanceDropdown.value
+}
+
+function setSearchRadius(radius) {
+    searchRadius.value = radius
+    showDistanceDropdown.value = false
+    if (userCoords.value) {
+        performGoogleSearch()
+    }
+}
+
+const showDropdown = ref(false)
+
+const closeDropdown = (e) => {
+    if (!e.target?.closest('.profile-container')) showDropdown.value = false
+}
+
+function logout() {
+    localStorage.removeItem('isAuthenticated')
+    router.push('/')
+}
+
+function getAISuggestion() {
+    // Placeholder for AI suggestion
+    console.log("AI Suggestion clicked!")
+}
+
+const timeRangeInvalid = computed(() => {
+    const [startH, startM] = activityStartHour.value.split(':').map(Number)
+    const [endH, endM] = activityEndHour.value.split(':').map(Number)
+    const startMins = startH * 60 + startM
+    const endMins = endH * 60 + endM
+    return startMins >= endMins  // still blocks same time
+})
 
 
 
 </script>
 
 <template>
-    <div class="page">
+    <div class="page" @click="closeDropdown($event)">
         <nav class="navbar">
             <button class="back-btn" @click="router.push('/home')">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -199,7 +300,32 @@ function setcategoryAndQuerry(cat) {
             </div>
             <div class="navbar__right">
                 <div v-if="userCoords" class="loc-badge">
-                    <span class="pulse-dot"></span> 20km Active
+                    <span class="pulse-dot"></span> {{ searchRadius }}km Active
+                </div>
+                <div class="profile-container" @click.stop="showDropdown = !showDropdown">
+                    <div class="avatar"><span class="avatar-fallback">U</span></div>
+                    <Transition name="dropdown">
+                        <div v-if="showDropdown" class="dropdown">
+                            <a href="/profile" class="dropdown__item">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <circle cx="12" cy="8" r="4" />
+                                    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                                </svg>
+                                Profile
+                            </a>
+                            <div class="dropdown__divider"></div>
+                            <a href="#" @click.prevent="logout()" class="dropdown__item dropdown__item--danger">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                    <polyline points="16 17 21 12 16 7" />
+                                    <line x1="21" y1="12" x2="9" y2="12" />
+                                </svg>
+                                Sign Out
+                            </a>
+                        </div>
+                    </Transition>
                 </div>
             </div>
         </nav>
@@ -215,7 +341,7 @@ function setcategoryAndQuerry(cat) {
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <circle cx="11" cy="11" r="8" />
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
                         </svg>
                         Discover
                     </button>
@@ -240,9 +366,12 @@ function setcategoryAndQuerry(cat) {
                     </button>
                 </div>
 
-                <div class="sidebar-footer" v-if="locationError">
+                <!--<div class="sidebar-footer" v-if="locationError">
                     <p class="error-msg">{{ locationError }}</p>
                     <button class="retry-btn" @click="getLocationAndSearch">Retry Location</button>
+                </div>-->
+                <div class="sidebar-button-div">
+                    <button class="sidebar-btn" @click="router.push('/physical-activity-recommendation')">AI recomendation</button>
                 </div>
             </aside>
 
@@ -261,13 +390,14 @@ function setcategoryAndQuerry(cat) {
                             <input v-model="searchQuery" type="text"
                                 placeholder="Search Google for gyms, parks, or activity..." class="main-search-input"
                                 @keyup.enter="getLocationAndSearch" />
-                            <button @click="getLocationAndSearch" class="search-action-btn">Search 20km</button>
+                            <button @click="getLocationAndSearch" class="search-action-btn">Search {{ searchRadius
+                                }}km</button>
                         </div>
                     </div>
 
                     <div class="results-header">
                         <h3>{{ selectedCategory }} Results <span v-if="!isLoading">({{ filteredActivities.length
-                                }})</span></h3>
+                        }})</span></h3>
                     </div>
 
                     <!-- LISTINGS (DESIGN 1 STYLE) -->
@@ -344,13 +474,34 @@ function setcategoryAndQuerry(cat) {
                 <div class="rp-section">
                     <div class="rp-label">Search Settings</div>
                     <div class="settings-card">
-                        <div class="setting-row">
+                        <div class="setting-row" style="position: relative;">
                             <span>Radius</span>
-                            <span class="highlight">20 km</span>
+                            <span class="highlight" @click="openDistanceDroppdown()">{{ searchRadius }} km ▾</span>
+                            <div v-if="showDistanceDropdown" class="distance-dropdown">
+                                <div @click="setSearchRadius(5)">5 km</div>
+                                <div @click="setSearchRadius(10)">10 km</div>
+                                <div @click="setSearchRadius(20)">20 km</div>
+                            </div>
                         </div>
                         <div class="setting-row">
                             <span>Location</span>
                             <span class="highlight-green">Enabled</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="rp-section">
+                    <div class="rp-label">Set Activity Interval</div>
+                    <div class="settings-card">
+                        <div class="setting-row align-center">
+                            <span>Set start hour</span>
+                            <input type="time" v-model="activityStartHour" class="time-input" />
+                        </div>
+                        <div class="setting-row align-center">
+                            <span>Set end hour</span>
+                            <input type="time" v-model="activityEndHour" class="time-input" />
+                        </div>
+                        <div v-if="timeRangeInvalid" class="time-error-msg">
+                            Start time must be before end time.
                         </div>
                     </div>
                 </div>
@@ -365,6 +516,8 @@ function setcategoryAndQuerry(cat) {
                         </div>
                     </div>
                 </div>
+
+
             </aside>
 
         </div>
@@ -469,6 +622,8 @@ function setcategoryAndQuerry(cat) {
     background: #0a0e18;
     border-right: 1px solid rgba(255, 255, 255, 0.05);
     padding: 20px 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar__tabs {
@@ -499,9 +654,9 @@ function setcategoryAndQuerry(cat) {
 }
 
 .sidebar__section-label {
-    font-size: 10px;
+    font-size: 12.5px;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.3);
     padding: 0 20px 12px;
 }
 
@@ -527,6 +682,22 @@ function setcategoryAndQuerry(cat) {
     background: rgba(59, 158, 255, 0.08);
     color: #3b9eff;
     font-weight: 600;
+}
+
+.sidebar-button-div {
+    margin: 10px ;
+    margin-top: 60px;
+}
+
+.sidebar-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg ,#5ee7b0, #3b9eff);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
 }
 
 /* SEARCH HERO */
@@ -723,11 +894,24 @@ function setcategoryAndQuerry(cat) {
     padding: 24px 16px;
 }
 
+.rp-section {
+    margin-bottom: 32px;
+}
+
 .rp-label {
-    font-size: 10px;
+    font-size: 12.5px;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.4);
     margin-bottom: 16px;
+}
+
+.rp-event-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px;
+    border-radius: 12px;
 }
 
 .settings-card {
@@ -743,14 +927,78 @@ function setcategoryAndQuerry(cat) {
     margin-bottom: 8px;
 }
 
+.align-center {
+    align-items: center;
+}
+
+.time-input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    outline: none;
+    font-family: inherit;
+}
+
+.time-input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.7;
+    cursor: pointer;
+}
+
+.time-error-msg {
+    color: #f87171;
+    font-size: 11.5px;
+    margin-top: 8px;
+    text-align: right;
+    font-weight: 500;
+}
+
 .highlight {
     color: #3b9eff;
     font-weight: 600;
 }
 
+.highlight:hover {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 .highlight-green {
     color: #5ee7b0;
     font-weight: 600;
+}
+
+.distance-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 5px;
+    background: #111722;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 4px 0;
+    z-index: 10;
+    min-width: 80px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+}
+
+.distance-dropdown div {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #e8edf5;
+    transition: background-color 0.2s, color 0.2s;
+    text-align: right;
+}
+
+.distance-dropdown div:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #5ee7b0;
 }
 
 .skeleton-card {
@@ -772,5 +1020,92 @@ function setcategoryAndQuerry(cat) {
     100% {
         opacity: 0.5;
     }
+}
+
+.navbar__right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.profile-container {
+    position: relative;
+    cursor: pointer;
+}
+
+.avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1e2d45, #0f1929);
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.avatar:hover {
+    border-color: rgba(94, 231, 176, 0.5);
+}
+
+.avatar-fallback {
+    font-size: 13px;
+    font-weight: 600;
+    color: #8baacc;
+}
+
+.dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    background: #0f1929;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 6px;
+    min-width: 160px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    z-index: 200;
+}
+
+.dropdown__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+}
+
+.dropdown__item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+}
+
+.dropdown__item--danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
+}
+
+.dropdown__divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 4px 0;
+}
+
+.dropdown-enter-active,
+.dropdown-leave-active {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
 }
 </style>

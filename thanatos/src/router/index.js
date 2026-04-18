@@ -5,7 +5,7 @@ import Profile from '../components/Profile.vue'
 import Learnmore from '../components/Learnmore.vue'
 import Mentalhealth from '../components/Mentalhealth.vue'
 import Physicalhealth from '../components/Physicalhealthpage.vue'
-
+import PhysicalActivityRecomennder from '../components/PhysicalActivityRecomennder.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -14,8 +14,9 @@ const router = createRouter({
     { path: '/home' , component: HomePage , meta: {title: 'Home', requiresAuth: true}},
     {path: '/profile', component: Profile, meta: {title: 'Profile', requiresAuth: true}},
     {path: '/learnmore', component: Learnmore, meta: {title: 'Learn More', requiresAuth: true}},
-    {path: '/mentalhealth', component: Mentalhealth, meta: {title: 'Mental Health', requiresAuth: true}},
-    {path: '/physicalhealth', component: Physicalhealth, meta: {title: 'Physical Health', requiresAuth: true}}
+    {path: '/mental-health', component: Mentalhealth, meta: {title: 'Mental Health', requiresAuth: true}},
+    {path: '/physical-health', component: Physicalhealth, meta: {title: 'Physical Health', requiresAuth: true}},
+    {path: '/physical-activity-recommendation', component: PhysicalActivityRecomennder, meta: {title: 'Physical Activity Recommendation', requiresAuth: true}},
   ],
 })
 

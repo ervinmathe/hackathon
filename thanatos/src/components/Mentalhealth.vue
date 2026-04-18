@@ -49,11 +49,23 @@ const fakePosts = computed(() => activeChannel.value ? [
   { id: 2, user: 'nova_k', avatar: '🌙', time: '4h ago', content: 'Anyone else notice that journaling in the morning vs evening has totally different effects on mood?', likes: 58, comments: 27 },
   { id: 3, user: 'rowan_j', avatar: '✨', time: '6h ago', content: 'Sharing this reminder: rest is productive. You don\'t have to earn rest. 💙', likes: 142, comments: 9 },
 ] : [])
+
+const showDropdown = ref(false)
+
+const closeDropdown = (e) => {
+    if (!e.target.closest('.profile-container')) showDropdown.value = false
+}
+
+function logout() {
+    localStorage.removeItem('isAuthenticated')
+    router.push('/')
+}
+
 </script>
 
 <template>
-  <div class="page">
-    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+  <div class="page" @click="closeDropdown()">
+    <!--@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');-->
 
     <!-- NAVBAR -->
     <nav class="navbar">
@@ -68,8 +80,23 @@ const fakePosts = computed(() => activeChannel.value ? [
         <span class="brand-sub">Mental Health</span>
       </div>
       <div class="navbar__right">
-        <div class="avatar"><span>U</span></div>
-      </div>
+    <div class="profile-container" @click.stop="showDropdown = !showDropdown">
+        <div class="avatar"><span class="avatar-fallback">U</span></div>
+        <Transition name="dropdown">
+            <div v-if="showDropdown" class="dropdown">
+                <a href="/profile" class="dropdown__item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                    Profile
+                </a>
+                <div class="dropdown__divider"></div>
+                <a href="#" @click="logout()" class="dropdown__item dropdown__item--danger">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Sign Out
+                </a>
+            </div>
+        </Transition>
+    </div>
+</div>
     </nav>
 
     <!-- MAIN LAYOUT -->
@@ -328,7 +355,9 @@ const fakePosts = computed(() => activeChannel.value ? [
   border: 1.5px solid rgba(255,255,255,0.1);
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; color: #8baacc; font-weight: 600;
+  cursor: pointer; transition: border-color 0.2s;
 }
+.navbar__right .avatar:hover { border-color: rgba(94,231,176,0.5); }
 
 /* LAYOUT */
 .layout {
@@ -603,4 +632,28 @@ const fakePosts = computed(() => activeChannel.value ? [
   .sidebar { width: 200px; min-width: 200px; }
   .content { padding: 20px 16px; }
 }
+
+.profile-container { position: relative; cursor: pointer; }
+.dropdown {
+  position: absolute; top: calc(100% + 10px); right: 0;
+  background: #0f1929;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 6px;
+  min-width: 160px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  z-index: 200;
+}
+.dropdown__item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 8px;
+  font-size: 13.5px; color: rgba(255,255,255,0.7);
+  text-decoration: none; transition: all 0.15s;
+  font-family: 'DM Sans', sans-serif;
+}
+.dropdown__item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.dropdown__item--danger:hover { background: rgba(239,68,68,0.1); color: #f87171; }
+.dropdown__divider { height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0; }
+.dropdown-enter-active, .dropdown-leave-active { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
+.dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-6px) scale(0.97); }
 </style>
