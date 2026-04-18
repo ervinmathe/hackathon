@@ -321,6 +321,26 @@ const closeDropdown = (e) => {
 const handleLogout = () => {
     authStore.logout(router)
 }
+
+const requestLocationManually = () => {
+    locationError.value = null
+    isLoading.value = true
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            userCoords.value = { lat: position.coords.latitude, lng: position.coords.longitude }
+            performGoogleSearch()
+        },
+        (err) => {
+            if (err.code === 1) {
+                locationError.value = 'denied'
+            } else {
+                locationError.value = 'Could not get GPS location'
+            }
+            isLoading.value = false
+        },
+        { enableHighAccuracy: true }
+    )
+}
 </script>
 
 <template>
@@ -430,6 +450,13 @@ const handleLogout = () => {
                                 <button class="view-btn" @click="openOnMaps(act)">View on Google Maps</button>
                             </div>
                         </template>
+
+                        <div v-if="locationError === 'denied'" class="empty-state">
+    <span class="empty-icon">🔒</span>
+    <h3>Location Access Denied</h3>
+    <p>Wellpath needs your location to find nearby activities. Please allow access and try again.</p>
+    <button class="location-retry-btn" @click="requestLocationManually">Enable Location</button>
+</div>
 
                         <div v-if="filteredActivities.length === 0 && !isLoading" class="empty-state">
                             <span class="empty-icon">📍</span>
@@ -596,7 +623,7 @@ const handleLogout = () => {
 
 .layout { display: flex; flex: 1; height: calc(100vh - 65px); overflow: hidden; }
 
-.sidebar { width: 240px; height: 90vh; background: #0a0e18; border-right: 1px solid rgba(255,255,255,0.05); padding: 20px 0; display: flex; flex-direction: column; }
+.sidebar { width: 240px; background: #0a0e18; border-right: 1px solid rgba(255,255,255,0.05); padding: 20px 0; display: flex; flex-direction: column; }
 .sidebar__tabs { padding: 0 16px 20px; display: flex; gap: 8px; }
 .tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 500; background: none; border: none; color: rgba(255,255,255,0.3); cursor: pointer; }
 .tab--active { background: rgba(94,231,176,0.1); color: #5ee7b0; }
@@ -604,8 +631,10 @@ const handleLogout = () => {
 .category-list { display: flex; flex-direction: column; gap: 4px; padding: 0 12px; }
 .cat-item { text-align: left; padding: 10px 16px; border-radius: 10px; background: none; border: none; color: rgba(255,255,255,0.5); font-size: 14px; cursor: pointer; }
 .cat-item--active { background: rgba(59,158,255,0.08); color: #3b9eff; font-weight: 600; }
-.sidebar-button-div { margin: 10px; margin-top: auto; padding-top: 16px; }
-.sidebar-btn { width: 100%; padding: 12px; background: linear-gradient(135deg,#5ee7b0,#3b9eff); border: none; color: #070b12; font-weight: 700; border-radius: 10px; cursor: pointer; font-family: inherit; }
+.sidebar-button-div { position: fixed; bottom: 28px; left: 24px; z-index: 100; width: 192px; }
+.sidebar-btn { width: 100%; padding: 14px; background: linear-gradient(135deg,#5ee7b0,#3b9eff); border: none; color: #070b12; font-weight: 700; border-radius: 12px; cursor: pointer; font-family: inherit; box-shadow: 0 4px 15px rgba(94,231,176,0.2); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.sidebar-btn:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(94,231,176,0.45); filter: brightness(1.1); }
+.sidebar-btn:active { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(94,231,176,0.3); }
 .sidebar-footer { padding: 12px 16px; }
 .error-msg { color: #f87171; font-size: 12px; margin-bottom: 8px; }
 .retry-btn { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: none; color: rgba(255,255,255,0.5); cursor: pointer; font-size: 12px; }
@@ -686,4 +715,20 @@ const handleLogout = () => {
 .submit-btn:hover { transform: translateY(-2px); }
 .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 .close-btn { background: none; border: none; color: #e8edf5; font-size: 32px; cursor: pointer; line-height: 1; }
+
+.location-retry-btn {
+    margin-top: 16px;
+    padding: 10px 24px;
+    background: #96F550;
+    color: #0a0a0a;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.location-retry-btn:hover {
+    opacity: 0.85;
+}
 </style>
