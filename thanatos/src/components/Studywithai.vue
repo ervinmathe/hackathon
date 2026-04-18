@@ -7,7 +7,7 @@ import api from '../api/api'
 // ─── BACKEND URLS ──────────────────────────────────────────────────────────────
 // Replace these with your actual backend endpoints
 const OPTIMIZE_PROMPT_URL = 'https://millennium-shine-latter-assure.trycloudflare.com/ai/refine'   // POST: receives { userId, guidelinePrompt, userAnswers } → returns { optimizedPrompt }
-const CHAT_URL            = 'https://millennium-shine-latter-assure.trycloudflare.com/ai/study-chat'        // POST: receives { userId, prompt, conversationHistory } → returns { reply }
+const CHAT_URL            = 'https://millennium-shine-latter-assure.trycloudflare.com/ai/ask'        // POST: receives { userId, prompt, conversationHistory } → returns { reply }
 // ───────────────────────────────────────────────────────────────────────────────
 
 const GUIDELINES = `

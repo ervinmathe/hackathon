@@ -24,6 +24,10 @@ export class AiService {
   }
 
   async refineQuestion(question: string, preferences?: any, customGuidelines?: string): Promise<string> {
+    if (!question || question.trim() === '') {
+        return 'Please provide a valid question.';
+    }
+
     const userContext = preferences?.tags ? `USER PREFERENCES (TAGS): ${preferences.tags.join(', ')}` : '';
     const activeGuidelines = customGuidelines 
       ? `${this.defaultGuidelines}\nCUSTOM GUIDELINES: ${customGuidelines}` 
@@ -37,15 +41,16 @@ export class AiService {
             role: 'system', 
             content: `${activeGuidelines}\n${userContext}\nRole: Academic Prompt Engineer. Task: Transform the user's question into a precise, learning-optimized prompt. Return ONLY the refined question.` 
           },
-          { role: 'user', content: question }
+          { role: 'user', content: question.trim() }
         ],
       });
       return completion.choices[0]?.message?.content?.trim() || 'No response received.';
     } catch (error) {
-      console.error('Groq Refine Error:', error);
-      return `Refined (Fallback): ${question}`;
+      console.error('Groq Refine Error Details:', error);
+      return `Finomított (Fallback): ${question}`;
     }
   }
+
 
   async ask(refinedQuestion: string): Promise<string> {
     try {
