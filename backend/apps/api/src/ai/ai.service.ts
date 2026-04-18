@@ -23,8 +23,12 @@ export class AiService {
     });
   }
 
-  async refineQuestion(question: string, preferences?: any, customGuidelines?: string): Promise<string> {
-    if (!question || question.trim() === '') {
+  async refineQuestion(question: string | Record<string, any>, preferences?: any, customGuidelines?: string): Promise<string> {
+    const questionText = typeof question === 'string'
+      ? question
+      : JSON.stringify(question, null, 2);
+
+    if (!questionText || questionText.trim() === '') {
         return 'Please provide a valid question.';
     }
 
@@ -41,13 +45,13 @@ export class AiService {
             role: 'system', 
             content: `${activeGuidelines}\n${userContext}\nRole: Academic Prompt Engineer. Task: Transform the user's question into a precise, learning-optimized prompt. Return ONLY the refined question.` 
           },
-          { role: 'user', content: question.trim() }
+          { role: 'user', content: questionText.trim() }
         ],
       });
       return completion.choices[0]?.message?.content?.trim() || 'No response received.';
     } catch (error) {
       console.error('Groq Refine Error Details:', error);
-      return `Finomított (Fallback): ${question}`;
+      return `Finomított (Fallback): ${questionText}`;
     }
   }
 

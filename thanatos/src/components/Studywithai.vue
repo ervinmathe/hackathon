@@ -165,9 +165,8 @@ async function buildAndOptimizePrompt() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId: authStore.user?.id,
-        question: userAnswers,   
-        custom_guidelines: combinedGuidelines,
-        userAnswers
+        question: buildFallbackPrompt(userAnswers),
+        custom_guidelines: combinedGuidelines
       })
     })
     if (!res.ok) throw new Error('Server error')
@@ -219,7 +218,7 @@ async function sendMessage() {
     })
     if (!res.ok) throw new Error('Server error')
     const data = await res.json()
-    chatMessages.value.push({ role: 'assistant', content: data.reply })
+    chatMessages.value.push({ role: 'assistant', content: data.reply || data.answer || 'Sorry, no response was returned.' })
   } catch (err) {
     console.error('Chat request failed:', err)
     chatMessages.value.push({ role: 'assistant', content: '⚠️ Something went wrong connecting to the AI. Please try again.' })

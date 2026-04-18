@@ -26,7 +26,11 @@ export class AiController {
       }
     }
     
-    const refinedText = await this.aiService.refineQuestion(dto.question, preferences, dto.custom_guidelines);
+    const normalizedQuestion = typeof dto.question === 'string'
+      ? dto.question
+      : JSON.stringify(dto.question, null, 2);
+
+    const refinedText = await this.aiService.refineQuestion(normalizedQuestion, preferences, dto.custom_guidelines);
     console.log('--- Controller Refine Result (Final):', refinedText);
     
     return { refined: refinedText };
