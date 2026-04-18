@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { Knex } from 'knex';
 
 @Injectable()
@@ -52,6 +52,17 @@ export class CalendarService {
   }
 
   async toggleInterest(userId: string, eventId: string) {
+    // Defensive checks to avoid FK violations when client sends invalid IDs
+    const user = await this.knex('users').where({ id: userId }).first();
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const event = await this.knex('calendar_events').where({ id: eventId }).first();
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
     const existing = await this.knex('event_interests')
       .where({ user_id: userId, event_id: eventId })
       .first();
@@ -61,13 +72,13 @@ export class CalendarService {
         .where({ user_id: userId, event_id: eventId })
         .del();
       return { interested: false };
-    } else {
-      await this.knex('event_interests').insert({
-        user_id: userId,
-        event_id: eventId
-      });
-      return { interested: true };
     }
+
+    await this.knex('event_interests').insert({
+      user_id: userId,
+      event_id: eventId
+    });
+    return { interested: true };
   }
 
   async create(data: any) {
