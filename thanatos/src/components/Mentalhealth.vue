@@ -289,13 +289,24 @@ onMounted(() => {
   pollingInterval = setInterval(fetchEvents, 10000)
 })
 
+const showDropdown = ref(false)
+
+const closeDropdown = (e) => {
+    if (!e.target.closest('.profile-container')) showDropdown.value = false
+}
+
+function logout() {
+    localStorage.removeItem('isAuthenticated')
+    router.push('/')
+}
+
 onBeforeUnmount(() => {
   if (pollingInterval) clearInterval(pollingInterval)
 })
 </script>
 
 <template>
-  <div class="page">
+  <div class="page" @click="closeDropdown()">
     <!-- NAVBAR -->
     <nav class="navbar">
       <button class="back-btn" @click="router.replace('/home')">
@@ -309,12 +320,22 @@ onBeforeUnmount(() => {
         <span class="brand-sub">Mental Health</span>
       </div>
       <div class="navbar__right">
-        <div class="role-badge" v-if="authStore.user">{{ authStore.user.role }}</div>
-        <button class="signout-btn-nav" @click="handleLogout">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Sign Out
-        </button>
+        <div class="profile-container" @click.stop="showDropdown = !showDropdown">
         <div class="avatar"><span>{{ authStore.user?.username?.charAt(0).toUpperCase() || 'U' }}</span></div>
+        <Transition name="dropdown">
+            <div v-if="showDropdown" class="dropdown">
+              <a href="/profile" class="dropdown__item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                Profile
+              </a>
+              <div class="dropdown__divider"></div>
+              <a href="#" @click.prevent="handleLogout()" class="dropdown__item dropdown__item--danger">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Sign Out
+              </a>
+            </div>
+          </Transition>
+          </div>
       </div>
     </nav>
 
@@ -361,6 +382,9 @@ onBeforeUnmount(() => {
             <span class="event-tag event-tag--active">All Sessions</span>
           </div>
         </template>
+        <div class="sidebar-button-div">
+          <button class="sidebar-btn" @click="router.push('/study-help')">Study with AI</button>
+        </div>
       </aside>
 
       <!-- CONTENT -->
@@ -623,8 +647,27 @@ onBeforeUnmount(() => {
   border-radius: 8px; cursor: pointer; margin-right: 12px;
   transition: all 0.2s;
 }
-.signout-btn-nav:hover { background: rgba(239, 68, 68, 0.1); color: #f87171; border-color: rgba(239, 68, 68, 0.2); }
-.avatar { width: 34px; height: 34px; border-radius: 50%; background: #1e2d45; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); }
+.back-btn:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
+.navbar__brand {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Sora', sans-serif; font-weight: 600; font-size: 15px;
+}
+.brand-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: linear-gradient(135deg, #5ee7b0, #3b9eff);
+  box-shadow: 0 0 8px rgba(94,231,176,0.5);
+}
+.brand-divider { color: rgba(255,255,255,0.2); font-weight: 300; }
+.brand-sub { color: rgba(255,255,255,0.4); font-weight: 400; }
+.navbar__right .avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, #1e2d45, #0f1929);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #8baacc; font-weight: 600;
+  cursor: pointer; transition: border-color 0.2s;
+}
+.navbar__right .avatar:hover { border-color: rgba(94,231,176,0.5); }
 
 /* LAYOUT */
 .layout { display: flex; flex: 1; overflow: hidden; }
@@ -642,6 +685,8 @@ onBeforeUnmount(() => {
 }
 .tab--active { background: rgba(94, 231, 176, 0.1); color: #5ee7b0; }
 .sidebar__section-label { font-size: 11px; text-transform: uppercase; color: var(--universalsecondarytextcolor); padding: 0 20px 12px; letter-spacing: 1px; opacity: 0.5; }
+.sidebar-button-div { margin: 10px; margin-top: auto; padding-top: 16px; }
+.sidebar-btn { width: 100%; padding: 12px; background: linear-gradient(135deg,#5ee7b0,#3b9eff); border: none; color: #070b12; font-weight: 700; border-radius: 10px; cursor: pointer; font-family: inherit; }
 
 .channel-list { flex: 1; overflow-y: auto; padding: 0 12px; display: flex; flex-direction: column; gap: 4px; }
 .channel-item {
@@ -808,4 +853,35 @@ input[type="datetime-local"] {
 .empty-icon { font-size: 40px; margin-bottom: 16px; display: block; opacity: 0.3; }
 
 @media (max-width: 1000px) { .right-panel { display: none; } }
+@media (max-width: 900px) {
+  .right-panel { display: none; }
+}
+@media (max-width: 600px) {
+  .sidebar { width: 200px; min-width: 200px; }
+  .content { padding: 20px 16px; }
+}
+
+.profile-container { position: relative; cursor: pointer; }
+.dropdown {
+  position: absolute; top: calc(100% + 10px); right: 0;
+  background: #0f1929;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 6px;
+  min-width: 160px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  z-index: 200;
+}
+.dropdown__item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 8px;
+  font-size: 13.5px; color: rgba(255,255,255,0.7);
+  text-decoration: none; transition: all 0.15s;
+  font-family: 'DM Sans', sans-serif;
+}
+.dropdown__item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.dropdown__item--danger:hover { background: rgba(239,68,68,0.1); color: #f87171; }
+.dropdown__divider { height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0; }
+.dropdown-enter-active, .dropdown-leave-active { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
+.dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-6px) scale(0.97); }
 </style>

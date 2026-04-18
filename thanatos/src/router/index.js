@@ -6,6 +6,8 @@ import Profile from '../components/Profile.vue'
 import Learnmore from '../components/Learnmore.vue'
 import Mentalhealth from '../components/Mentalhealth.vue'
 import Physicalhealth from '../components/Physicalhealthpage.vue'
+import PhysicalActivityRecomennder from '../components/PhysicalActivityRecomennder.vue'
+import StudyAI from '../components/Studywithai.vue'
 
 
 const router = createRouter({
@@ -16,7 +18,9 @@ const router = createRouter({
     { path: '/profile', component: Profile, meta: {title: 'Profile', requiresAuth: true}},
     { path: '/learnmore', component: Learnmore, meta: {title: 'Learn More', requiresAuth: true}},
     { path: '/mental-health', component: Mentalhealth, meta: {title: 'Mental Health', requiresAuth: true}},
-    { path: '/physical-health', component: Physicalhealth, meta: {title: 'Physical Health', requiresAuth: true}}
+    { path: '/physical-health', component: Physicalhealth, meta: {title: 'Physical Health', requiresAuth: true}},
+    {path: '/physical-activity-recommendation' , component: PhysicalActivityRecomennder , meta: {title: 'Recommendations' , requiresAuth: true}},
+    { path: '/study-help' , component: StudyAI , meta: {title: 'Help from AI' , requiresAuth: true}}
   ],
 })
 
