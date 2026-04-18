@@ -227,7 +227,7 @@ const slideOffset = computed(() => {
       </div>
     </div>
 
-    <p class="footer-note">© 2025 Wellpath · All rights reserved</p>
+    <p class="footer-note">© 2026 Wellpath · All rights reserved</p>
   </div>
 </template>
 
