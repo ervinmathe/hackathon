@@ -155,7 +155,7 @@ function logout() {
           <span class="brand-dot brand-dot--sm"></span>
           <span>Wellpath</span>
         </div>
-        <p class="footer__copy">© 2025 Wellpath. All rights reserved.</p>
+        <p class="footer__copy">© 2026 Wellpath. All rights reserved.</p>
       </div>
     </footer>
 
