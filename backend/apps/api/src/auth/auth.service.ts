@@ -75,7 +75,20 @@ export class AuthService {
     };
   }
 
+  async getUser(id: string) {
+    const user = await this.knex('users')
+      .where({ id })
+      .select('id', 'username', 'email', 'role', 'university_id', 'enrollment_id', 'year', 'profile_url', 'preferences')
+      .first();
+    
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    return user;
+  }
+
   async updateProfile(id: string, data: any) {
+    console.log(`Updating profile for ID: ${id}`, data);
     const { username, email, password, enrollment_id, year, profile_url } = data;
     const updateData: any = {};
 
@@ -89,11 +102,26 @@ export class AuthService {
       updateData.password = await bcrypt.hash(password, 10);
     }
 
-    const [updatedUser] = await this.knex('users')
-      .where({ id })
-      .update(updateData)
-      .returning(['id', 'username', 'email', 'role', 'university_id', 'enrollment_id', 'year', 'profile_url']);
+    try {
+      // Megpróbáljuk UUID-ként kezelni, de ha a DB integer-t vár, itt lehet a hiba
+      const [updatedUser] = await this.knex('users')
+        .where({ id })
+        .update(updateData)
+        .returning(['id', 'username', 'email', 'role', 'university_id', 'enrollment_id', 'year', 'profile_url']);
 
-    return updatedUser;
+      console.log('Update result:', updatedUser);
+
+      if (!updatedUser) {
+        console.error(`User with ID ${id} not found in DB!`);
+        throw new UnauthorizedException('User not found');
+      }
+      return updatedUser;
+    } catch (error) {
+      console.error('Database Update Error:', error);
+      if (error.code === '23505') {
+        throw new ConflictException('Username or email already taken');
+      }
+      throw error;
+    }
   }
 }

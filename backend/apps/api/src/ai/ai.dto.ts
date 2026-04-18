@@ -6,6 +6,19 @@ export class RefineQuestionDto {
     description: 'A felhasználó nyers kérdése',
   })
   question: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Opcionális: Felhasználó ID-ja a preferenciák betöltéséhez'
+  })
+  userId?: string;
+
+  @ApiProperty({
+    required: false,
+    example: 'A válasz legyen rövid és tartalmazzon egy tippet a fizikai aktivitáshoz is.',
+    description: 'Egyedi irányelvek a finomításhoz'
+  })
+  custom_guidelines?: string;
 }
 
 export class AskAiDto {
@@ -26,4 +39,20 @@ export class SurveyResponseDto {
     description: 'A kérdőív válaszai objektumként'
   })
   answers: any;
+}
+
+export class FacilityDataDto {
+  @ApiProperty({ example: 'uuid-1' })
+  id: string;
+  @ApiProperty({ example: 'Szigeti Fitness' })
+  name: string;
+  @ApiProperty({ example: ['konditerem', 'edzés', 'fizikai-aktivitás'] })
+  tags: string[];
+  @ApiProperty({ example: 'Modern konditerem az egyetem mellett.', required: false })
+  description?: string;
+}
+
+export class RecommendFacilitiesDto {
+  @ApiProperty({ type: [FacilityDataDto] })
+  candidates: FacilityDataDto[];
 }

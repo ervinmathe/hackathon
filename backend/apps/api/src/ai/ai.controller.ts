@@ -1,7 +1,7 @@
 import { Controller, Post, Body, Param, Inject } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { AiService } from './ai.service';
-import { RefineQuestionDto, AskAiDto, SurveyResponseDto } from './ai.dto';
+import { RefineQuestionDto, AskAiDto, SurveyResponseDto, RecommendFacilitiesDto } from './ai.dto';
 import { Knex } from 'knex';
 
 @ApiTags('AI')
@@ -13,14 +13,20 @@ export class AiController {
   ) {}
 
   @Post('refine')
-  @ApiOperation({ summary: 'Refine a raw user question using guidelines' })
+  @ApiOperation({ summary: 'Refine a raw user question using guidelines and preferences' })
   async refine(@Body() dto: RefineQuestionDto) {
-    const refined = await this.aiService.refineQuestion(dto.question);
+    let preferences = null;
+    if (dto.userId) {
+      const user = await this.knex('users').where({ id: dto.userId }).first();
+      preferences = user?.preferences;
+    }
+    
+    const refined = await this.aiService.refineQuestion(dto.question, preferences, dto.custom_guidelines);
     return { refined };
   }
 
   @Post('ask')
-  @ApiOperation({ summary: 'Ask a refined question to the LLM using guidelines' })
+  @ApiOperation({ summary: 'Ask a refined question to the LLM' })
   async ask(@Body() dto: AskAiDto) {
     const answer = await this.aiService.ask(dto.refined_question);
     return { answer };
@@ -30,10 +36,8 @@ export class AiController {
   @ApiOperation({ summary: 'Process questionnaire and store preferences' })
   @ApiParam({ name: 'userId', description: 'User ID' })
   async processSurvey(@Param('userId') userId: string, @Body() dto: SurveyResponseDto) {
-    // 1. Extract keywords via AI
     const tags = await this.aiService.extractPreferences(dto.answers);
     
-    // 2. Save to DB (preferences field)
     await this.knex('users')
       .where({ id: userId })
       .update({
@@ -41,5 +45,28 @@ export class AiController {
       });
 
     return { success: true, tags };
+  }
+
+  @Post('recommend-facilities/:userId')
+  @ApiOperation({ summary: 'Recommend physical facilities based on user preferences and candidates provided by frontend' })
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  async recommendFacilities(@Param('userId') userId: string, @Body() dto: RecommendFacilitiesDto) {
+    // 1. Get User preferences
+    const user = await this.knex('users').where({ id: userId }).first();
+    const userTags = user?.preferences?.tags || [];
+
+    // 2. Use the candidates provided by the frontend (circle listing)
+    const facilities = dto.candidates;
+
+    // 3. Match using AI
+    const recommendations = await this.aiService.matchFacilities(userTags, facilities);
+
+    // 4. Join with original data
+    const detailedRecommendations = recommendations.map(rec => {
+      const facility = facilities.find(f => f.id === rec.id);
+      return { ...facility, recommendation_reason: rec.reason };
+    });
+
+    return detailedRecommendations;
   }
 }

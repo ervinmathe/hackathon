@@ -72,14 +72,19 @@ async function handleSave() {
     isSubmitting.value = true
     statusMsg.value = 'Saving profile...'
 
-    const response = await api.post(`/auth/profile/${authStore.user.id}`, {
+    const updatedData = {
       username: username.value,
       profile_url: profileUrl.value
-    })
+    }
+
+    const response = await api.post(`/auth/profile/${authStore.user.id}`, updatedData)
 
     // Update local store
-    authStore.user = { ...authStore.user, ...response.data }
-    localStorage.setItem('user', JSON.stringify(authStore.user))
+    authStore.updateUser(response.data)
+    
+    // Explicitly sync local ref just in case
+    profileUrl.value = response.data.profile_url
+    username.value = response.data.username
     
     statusMsg.value = 'Profile updated successfully!'
   } catch (error) {

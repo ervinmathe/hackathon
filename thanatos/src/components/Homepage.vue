@@ -16,6 +16,7 @@ const handleScroll = () => {
 }
 
 onMounted(() => {
+  authStore.refreshUser()
   setTimeout(() => (heroVisible.value = true), 100)
   window.addEventListener('scroll', handleScroll)
 })

@@ -46,6 +46,13 @@ export class AuthController {
     return { message: 'Logged out' };
   }
 
+  @Get('profile/:id')
+  @ApiOperation({ summary: 'Get current user profile data' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  async getProfile(@Param('id') id: string) {
+    return this.authService.getUser(id);
+  }
+
   @Post('profile/:id')
   @ApiOperation({ summary: 'Update user profile' })
   @ApiParam({ name: 'id', description: 'User ID' })

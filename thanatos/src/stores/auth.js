@@ -33,6 +33,19 @@ export const useAuthStore = defineStore('auth', {
         throw error
       }
     },
+    async refreshUser() {
+      if (!this.user?.id) return
+      try {
+        const response = await api.get(`/auth/profile/${this.user.id}`)
+        this.updateUser(response.data)
+      } catch (error) {
+        console.error('Failed to refresh user data:', error)
+      }
+    },
+    updateUser(userData) {
+      this.user = { ...this.user, ...userData }
+      localStorage.setItem('user', JSON.stringify(this.user))
+    },
     logout(router) {
       this.user = null
       this.isAuthenticated = false
