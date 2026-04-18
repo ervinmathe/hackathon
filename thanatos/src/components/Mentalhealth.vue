@@ -686,8 +686,9 @@ onBeforeUnmount(() => {
 .tab--active { background: rgba(94, 231, 176, 0.1); color: #5ee7b0; }
 .sidebar__section-label { font-size: 11px; text-transform: uppercase; color: var(--universalsecondarytextcolor); padding: 0 20px 12px; letter-spacing: 1px; opacity: 0.5; }
 .sidebar-button-div { margin: 10px; margin-top: auto; padding-top: 16px; }
-.sidebar-btn { width: 100%; padding: 12px; background: linear-gradient(135deg,#5ee7b0,#3b9eff); border: none; color: #070b12; font-weight: 700; border-radius: 10px; cursor: pointer; font-family: inherit; }
-
+.sidebar-btn { width: 100%; padding: 14px; background: linear-gradient(135deg,#5ee7b0,#3b9eff); border: none; color: #070b12; font-weight: 700; border-radius: 12px; cursor: pointer; font-family: inherit; box-shadow: 0 4px 15px rgba(94,231,176,0.2); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.sidebar-btn:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(94,231,176,0.45); filter: brightness(1.1); }
+.sidebar-btn:active { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(94,231,176,0.3); }
 .channel-list { flex: 1; overflow-y: auto; padding: 0 12px; display: flex; flex-direction: column; gap: 4px; }
 .channel-item {
   display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px;
