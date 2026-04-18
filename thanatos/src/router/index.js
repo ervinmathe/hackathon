@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import Login from '../components/Login.vue'
 import HomePage from '../components/Homepage.vue' 
 import Profile from '../components/Profile.vue'
@@ -12,30 +13,33 @@ const router = createRouter({
   routes: [ 
     { path: '/' , component: Login , meta: {title: 'Login', requiresAuth: false}},
     { path: '/home' , component: HomePage , meta: {title: 'Home', requiresAuth: true}},
+<<<<<<< HEAD
     {path: '/profile', component: Profile, meta: {title: 'Profile', requiresAuth: true}},
     {path: '/learnmore', component: Learnmore, meta: {title: 'Learn More', requiresAuth: true}},
     {path: '/mental-health', component: Mentalhealth, meta: {title: 'Mental Health', requiresAuth: true}},
     {path: '/physical-health', component: Physicalhealth, meta: {title: 'Physical Health', requiresAuth: true}},
     {path: '/physical-activity-recommendation', component: PhysicalActivityRecomennder, meta: {title: 'Physical Activity Recommendation', requiresAuth: true}},
+=======
+    { path: '/profile', component: Profile, meta: {title: 'Profile', requiresAuth: true}},
+    { path: '/learnmore', component: Learnmore, meta: {title: 'Learn More', requiresAuth: true}},
+    { path: '/mental-health', component: Mentalhealth, meta: {title: 'Mental Health', requiresAuth: true}},
+    { path: '/physical-health', component: Physicalhealth, meta: {title: 'Physical Health', requiresAuth: true}}
+>>>>>>> origin/Gellért
   ],
 })
 
 router.beforeEach((to, from) => {
+  const authStore = useAuthStore()
   document.title = to.meta.title || "Invalid"
 
-  const isAuthenticated = //localStorage.getItem('isAuthenticated') === 'true'
-  true
-  // 1. If NOT logged in, only redirect if they aren't already going to the Login page
-  if (!isAuthenticated && to.path !== '/') {
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return '/'
   }
 
-  // 2. If LOGGED in, only redirect to home if they are trying to access the Login page
-  if (isAuthenticated && to.path === '/') {
+  if (authStore.isAuthenticated && to.path === '/') {
     return '/home'
   }
 
-  // 3. Otherwise, return nothing (or true) to let the navigation happen normally
   return true
 })
 

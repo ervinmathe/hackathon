@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanatos CMS - Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <style>
+        :root { --primary: #5ee7b0; }
+        body { font-size: 0.9rem; }
+        nav { margin-bottom: 2rem; border-bottom: 1px solid #eee; padding: 0.5rem 1rem; }
+        .badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .container-fluid { padding: 0 2rem; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #eee; }
+        .actions { display: flex; gap: 0.5rem; }
+        button.outline { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+        section { margin-bottom: 4rem; padding-top: 2rem; }
+        h2 { border-left: 5px solid var(--primary); padding-left: 1rem; margin-bottom: 1.5rem; }
+        .search-container { margin-bottom: 1rem; }
+        .scroll-x { overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><strong>Thanatos CMS</strong></li>
+        </ul>
+        <ul>
+            <li><a href="#universities">Egyetemek</a></li>
+            <li><a href="#enrollments">Szakok</a></li>
+            <li><a href="#forums">Fórumok</a></li>
+            <li><a href="#users">Felhasználók</a></li>
+            <li><a href="#posts">Posztok</a></li>
+            <li><a href="#calendar">Naptár</a></li>
+            <li><a href="/logout" class="secondary">Kijelentkezés</a></li>
+        </ul>
+    </nav>
+
+    <main class="container-fluid">
+        <!-- UNIVERSITIES -->
+        <section id="universities">
+            <h2>Egyetemek</h2>
+            <div class="search-container">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('univerities-table', this.value)">
+            </div>
+            <div class="scroll-x">
+                <table id="univerities-table">
+                    <thead>
+                        <tr>
+                            <th>Név</th>
+                            <th>Leírás</th>
+                            <th>Műveletek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% universities.forEach(u => { %>
+                            <tr>
+                                <td><%= u.name %></td>
+                                <td><%= u.description %></td>
+                                <td class="actions">
+                                    <button class="outline contrast" onclick="deleteItem('universities', '<%= u.id %>')">Törlés</button>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            <details>
+                <summary role="button" class="outline">Új egyetem hozzáadása</summary>
+                <form onsubmit="handleCreate(event, 'universities')">
+                    <input type="text" name="name" placeholder="Egyetem neve" required>
+                    <input type="text" name="description" placeholder="Leírás">
+                    <button type="submit">Mentés</button>
+                </form>
+            </details>
+        </section>
+
+        <!-- ENROLLMENTS -->
+        <section id="enrollments">
+            <h2>Szakok</h2>
+            <div class="search-container">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('enrollments-table', this.value)">
+            </div>
+            <div class="scroll-x">
+                <table id="enrollments-table">
+                    <thead>
+                        <tr>
+                            <th>Név</th>
+                            <th>Egyetem</th>
+                            <th>Leírás</th>
+                            <th>Műveletek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% enrollments.forEach(e => { %>
+                            <tr>
+                                <td><%= e.name %></td>
+                                <td><%= e.university_name %></td>
+                                <td><%= e.description %></td>
+                                <td class="actions">
+                                    <button class="outline contrast" onclick="deleteItem('enrollments', '<%= e.id %>')">Törlés</button>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            <details>
+                <summary role="button" class="outline">Új szak hozzáadása</summary>
+                <form onsubmit="handleCreate(event, 'enrollments')">
+                    <input type="text" name="name" placeholder="Szak neve" required>
+                    <select name="university_id" required>
+                        <option value="" disabled selected>Válassz egyetemet</option>
+                        <% universities.forEach(u => { %>
+                            <option value="<%= u.id %>"><%= u.name %></option>
+                        <% }) %>
+                    </select>
+                    <input type="text" name="description" placeholder="Leírás">
+                    <button type="submit">Mentés</button>
+                </form>
+            </details>
+        </section>
+
+        <!-- FORUMS -->
+        <section id="forums">
+            <h2>Fórumok (Tantárgyak)</h2>
+            <div class="search-container">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('forums-table', this.value)">
+            </div>
+            <div class="scroll-x">
+                <table id="forums-table">
+                    <thead>
+                        <tr>
+                            <th>Név</th>
+                            <th>Egyetem</th>
+                            <th>Szak</th>
+                            <th>Leírás</th>
+                            <th>Műveletek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% forums.forEach(f => { %>
+                            <tr>
+                                <td><%= f.name %></td>
+                                <td><%= f.university_name %></td>
+                                <td><%= f.enrollment_name %></td>
+                                <td><%= f.description %></td>
+                                <td class="actions">
+                                    <button class="outline contrast" onclick="deleteItem('forums', '<%= f.id %>')">Törlés</button>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            <details>
+                <summary role="button" class="outline">Új fórum hozzáadása</summary>
+                <form onsubmit="handleCreate(event, 'forums')">
+                    <input type="text" name="name" placeholder="Tantárgy neve" required>
+                    <select name="university_id" required>
+                        <option value="" disabled selected>Egyetem</option>
+                        <% universities.forEach(u => { %>
+                            <option value="<%= u.id %>"><%= u.name %></option>
+                        <% }) %>
+                    </select>
+                    <select name="enrollment_id" required>
+                        <option value="" disabled selected>Szak</option>
+                        <% enrollments.forEach(e => { %>
+                            <option value="<%= e.id %>"><%= e.name %> (<%= e.university_name %>)</option>
+                        <% }) %>
+                    </select>
+                    <input type="text" name="description" placeholder="Leírás">
+                    <button type="submit">Mentés</button>
+                </form>
+            </details>
+        </section>
+
+        <!-- USERS -->
+        <section id="users">
+            <h2>Felhasználók</h2>
+            <div class="search-container">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('users-table', this.value)">
+            </div>
+            <div class="scroll-x">
+                <table id="users-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Egyetem</th>
+                            <th>Szak</th>
+                            <th>Létrehozva</th>
+                            <th>Műveletek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% users.forEach(u => { %>
+                            <tr>
+                                <td><%= u.username %></td>
+                                <td><%= u.email %></td>
+                                <td><span class="badge" style="background: <%= u.role === 'ADMIN' ? '#ffcdd2' : (u.role === 'LESSADMIN' ? '#fff9c4' : '#e1f5fe') %>;"><%= u.role %></span></td>
+                                <td><%= u.university_name %></td>
+                                <td><%= u.enrollment_name %></td>
+                                <td><%= new Date(u.created_at).toLocaleDateString() %></td>
+                                <td class="actions">
+                                    <button class="outline contrast" onclick="deleteItem('users', '<%= u.id %>')">Törlés</button>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            <details>
+                <summary role="button" class="outline">Új admin/moderátor létrehozása</summary>
+                <form onsubmit="handleCreate(event, 'users')">
+                    <input type="text" name="username" placeholder="Felhasználónév" required>
+                    <input type="email" name="email" placeholder="Email" required>
+                    <input type="password" name="password" placeholder="Jelszó" required>
+                    <select name="role" required>
+                        <option value="USER">USER</option>
+                        <option value="LESSADMIN">LESSADMIN (Moderátor)</option>
+                        <option value="ADMIN">ADMIN</option>
+                    </select>
+                    <select name="university_id" required>
+                        <% universities.forEach(u => { %>
+                            <option value="<%= u.id %>"><%= u.name %></option>
+                        <% }) %>
+                    </select>
+                    <button type="submit">Létrehozás</button>
+                </form>
+            </details>
+        </section>
+
+        <!-- POSTS -->
+        <section id="posts">
+            <h2>Posztok moderálása</h2>
+            <div class="search-container">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('posts-table', this.value)">
+            </div>
+            <div class="scroll-x">
+                <table id="posts-table">
+                    <thead>
+                        <tr>
+                            <th>Cím</th>
+                            <th>Szerző</th>
+                            <th>Fórum</th>
+                            <th>Dátum</th>
+                            <th>Műveletek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% posts.forEach(p => { %>
+                            <tr style="<%= p.is_pinned ? 'background-color: #f1f8e9;' : '' %>">
+                                <td><%= p.title %></td>
+                                <td><%= p.author_name %></td>
+                                <td><%= p.forum_name %></td>
+                                <td><%= new Date(p.created_at).toLocaleDateString() %></td>
+                                <td class="actions">
+                                    <button class="outline" onclick="togglePin('<%= p.id %>')"><%= p.is_pinned ? 'Unpin' : 'Pin' %></button>
+                                    <button class="outline contrast" onclick="deleteItem('posts', '<%= p.id %>')">Törlés</button>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- CALENDAR -->
+        <section id="calendar">
+            <h2>Naptár moderálása</h2>
+            
+            <h3>Mentális egészség események</h3>
+            <div class="search-container">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('events-mental-table', this.value)">
+            </div>
+            <div class="scroll-x">
+                <table id="events-mental-table">
+                    <thead>
+                        <tr>
+                            <th>Esemény</th>
+                            <th>Szerző</th>
+                            <th>Kezdés</th>
+                            <th>Típus</th>
+                            <th>Állapot</th>
+                            <th>Műveletek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% calendar.filter(e => e.category === 'MENTAL').forEach(e => { %>
+                            <tr id="event-row-<%= e.id %>" style="<%= !e.is_approved ? 'background-color: #fff3e0;' : '' %>">
+                                <td><%= e.title %></td>
+                                <td><%= e.author_name %></td>
+                                <td><%= new Date(e.start_time).toLocaleString() %></td>
+                                <td><span class="badge" style="background: #e1f5fe; color: #0288d1;">MENTAL</span></td>
+                                <td class="status-cell">
+                                    <% if (e.is_approved) { %>
+                                        <span class="badge" style="background: #c8e6c9;">Approved</span>
+                                    <% } else { %>
+                                        <span class="badge" style="background: #ffe0b2;">Pending</span>
+                                    <% } %>
+                                </td>
+                                <td class="actions">
+                                    <% if (!e.is_approved) { %>
+                                        <button class="outline approve-btn" onclick="approveEvent('<%= e.id %>')">Jóváhagyás</button>
+                                    <% } %>
+                                    <button class="outline contrast" onclick="deleteItem('events', '<%= e.id %>')">Törlés</button>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 style="margin-top: 3rem;">Fizikai aktivitás események</h3>
+            <div class="search-container">
+                <input type="text" placeholder="Keresés..." onkeyup="filterTable('events-physical-table', this.value)">
+            </div>
+            <div class="scroll-x">
+                <table id="events-physical-table">
+                    <thead>
+                        <tr>
+                            <th>Esemény</th>
+                            <th>Szerző</th>
+                            <th>Kezdés</th>
+                            <th>Típus</th>
+                            <th>Állapot</th>
+                            <th>Műveletek</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% calendar.filter(e => e.category === 'PHYSICAL').forEach(e => { %>
+                            <tr id="event-row-<%= e.id %>" style="<%= !e.is_approved ? 'background-color: #fff3e0;' : '' %>">
+                                <td><%= e.title %></td>
+                                <td><%= e.author_name %></td>
+                                <td><%= new Date(e.start_time).toLocaleString() %></td>
+                                <td><span class="badge" style="background: #f1f8e9; color: #388e3c;">PHYSICAL</span></td>
+                                <td class="status-cell">
+                                    <% if (e.is_approved) { %>
+                                        <span class="badge" style="background: #c8e6c9;">Approved</span>
+                                    <% } else { %>
+                                        <span class="badge" style="background: #ffe0b2;">Pending</span>
+                                    <% } %>
+                                </td>
+                                <td class="actions">
+                                    <% if (!e.is_approved) { %>
+                                        <button class="outline approve-btn" onclick="approveEvent('<%= e.id %>')">Jóváhagyás</button>
+                                    <% } %>
+                                    <button class="outline contrast" onclick="deleteItem('events', '<%= e.id %>')">Törlés</button>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        function filterTable(tableId, query) {
+            const filter = query.toLowerCase();
+            const table = document.getElementById(tableId);
+            const tr = table.getElementsByTagName("tr");
+
+            for (let i = 1; i < tr.length; i++) {
+                let found = false;
+                const td = tr[i].getElementsByTagName("td");
+                for (let j = 0; j < td.length - 1; j++) { // Exclude actions column
+                    if (td[j] && td[j].innerText.toLowerCase().indexOf(filter) > -1) {
+                        found = true;
+                        break;
+                    }
+                }
+                tr[i].style.display = found ? "" : "none";
+            }
+        }
+
+        async function deleteItem(resource, id) {
+            if (!confirm('Biztosan törölni szeretnéd?')) return;
+            const res = await fetch(`/admin/${resource}/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                // If the row has an ID like 'event-row-uuid', remove it
+                const rowId = resource === 'events' ? `event-row-${id}` : `${resource}-row-${id}`;
+                const row = document.getElementById(rowId);
+                if (row) {
+                    row.remove();
+                } else {
+                    // Fallback for rows without ID yet
+                    location.reload();
+                }
+            } else {
+                alert('Hiba történt a törlés során.');
+            }
+        }
+
+        async function togglePin(id) {
+            // Note: This endpoint is in the API (3000) not CMS (3001) usually,
+            // but for simplicity we assume it's proxied or moved to admin.
+            // Let's assume for now it needs to call the API but since we're in EJS/SSR,
+            // we should have an admin route for it.
+            const res = await fetch(`/admin/posts/${id}/pin`, { method: 'PATCH' });
+            if (res.ok) {
+                location.reload();
+            } else {
+                alert('Hiba történt a pinelés során.');
+            }
+        }
+
+        async function approveEvent(id) {
+            if (!confirm('Biztosan jóváhagyod ezt az eseményt?')) return;
+            const res = await fetch(`/admin/events/${id}/approve`, { method: 'PATCH' });
+            if (res.ok) {
+                const row = document.getElementById(`event-row-${id}`);
+                if (row) {
+                    row.style.backgroundColor = '';
+                    const statusCell = row.querySelector('.status-cell');
+                    if (statusCell) {
+                        statusCell.innerHTML = '<span class="badge" style="background: #c8e6c9;">Approved</span>';
+                    }
+                    const approveBtn = row.querySelector('.approve-btn');
+                    if (approveBtn) {
+                        approveBtn.remove();
+                    }
+                } else {
+                    location.reload();
+                }
+            } else {
+                alert('Hiba történt a jóváhagyás során.');
+            }
+        }
+
+        async function handleCreate(event, resource) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData.entries());
+
+            const res = await fetch(`/admin/${resource}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                location.reload();
+            } else {
+                const err = await res.json();
+                alert('Hiba: ' + (err.message || 'Ismeretlen hiba'));
+            }
+        }
+    </script>
+</body>
+</html>

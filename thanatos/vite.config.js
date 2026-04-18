@@ -10,6 +10,19 @@ export default defineConfig({
     vue(),
     vueDevTools(),
   ],
+  test: {
+    environment: 'jsdom',
+    globals: true
+  },
+  server: {
+    allowedHosts: ['sisters-protective-spend-mitchell.trycloudflare.com'],
+    proxy: {
+      '/auth': 'http://localhost:3000',
+      '/forums': 'http://localhost:3000',
+      '/calendar': 'http://localhost:3000',
+      '/posts': 'http://localhost:3000'
+    }
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

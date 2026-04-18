@@ -1,10 +1,27 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const activeTab = ref('login')
 const sliding = ref(false)
+// Error & Loading
+const error = ref('')
+const loading = ref(false)
+
+// Input Refs for focus management
+const loginPassRef = ref(null)
+const regEmailRef = ref(null)
+const regPassRef = ref(null)
+const regConfirmRef = ref(null)
+
+const focusNext = (nextRef) => {
+  if (nextRef && nextRef.focus) {
+    nextRef.focus()
+  }
+}
 
 // Login fields
 const loginEmail = ref('')
@@ -18,11 +35,52 @@ const regConfirm = ref('')
 
 const switchTab = (tab) => {
   activeTab.value = tab
+  error.value = ''
 }
 
+const handleLogin = async () => {
+  if (!loginEmail.value || !loginPassword.value) {
+    error.value = 'Please fill in all fields'
+    return
+  }
+  
+  loading.value = true
+  error.value = ''
+  try {
+    await authStore.login(loginEmail.value, loginPassword.value)
+    router.replace('/home')
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Login failed. Please check your credentials.'
+  } finally {
+    loading.value = false
+  }
+}
 
-const handleLogin = () => {
-  router.replace('/home')
+const handleRegister = async () => {
+  if (!regName.value || !regEmail.value || !regPassword.value || !regConfirm.value) {
+    error.value = 'Please fill in all fields'
+    return
+  }
+  
+  if (regPassword.value !== regConfirm.value) {
+    error.value = 'Passwords do not match'
+    return
+  }
+  
+  loading.value = true
+  error.value = ''
+  try {
+    await authStore.register({
+      username: regName.value, // Mapping 'Full Name' to 'username' for backend
+      email: regEmail.value,
+      password: regPassword.value
+    })
+    router.replace('/home')
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Registration failed.'
+  } finally {
+    loading.value = false
+  }
 }
 
 const slideOffset = computed(() => {
@@ -71,19 +129,25 @@ const slideOffset = computed(() => {
                 <h2 class="panel__title">Welcome back</h2>
                 <p class="panel__sub">Sign in to continue your wellness journey</p>
               </div>
+
+              <!-- Error Message -->
+              <div v-if="error" class="error-msg">
+                {{ error }}
+              </div>
+
               <div class="fields">
                 <div class="field">
                   <label class="field__label">Email</label>
                   <div class="field__wrap">
                     <svg class="field__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
-                    <input v-model="loginEmail" type="email" placeholder="you@example.com" class="field__input" />
+                    <input v-model="loginEmail" type="email" placeholder="you@example.com" class="field__input" @keyup.enter="focusNext(loginPassRef)" />
                   </div>
                 </div>
                 <div class="field">
                   <label class="field__label">Password</label>
                   <div class="field__wrap">
                     <svg class="field__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    <input v-model="loginPassword" type="password" placeholder="••••••••" class="field__input" />
+                    <input ref="loginPassRef" v-model="loginPassword" type="password" placeholder="••••••••" class="field__input" @keyup.enter="handleLogin" />
                   </div>
                 </div>
                 <div class="field__row">
@@ -93,9 +157,12 @@ const slideOffset = computed(() => {
                   <a href="#" class="forgot">Forgot password?</a>
                 </div>
               </div>
-              <button class="submit-btn" @click="handleLogin">
-                Sign In
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <button class="submit-btn" :disabled="loading" @click="handleLogin">
+                <span v-if="loading">Signing in...</span>
+                <template v-else>
+                  Sign In
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </template>
               </button>
               <p class="switch-hint">Don't have an account? <span @click="switchTab('register')">Register</span></p>
             </div>
@@ -106,39 +173,48 @@ const slideOffset = computed(() => {
                 <h2 class="panel__title">Create account</h2>
                 <p class="panel__sub">Join Wellpath and start your journey today</p>
               </div>
+
+              <!-- Error Message -->
+              <div v-if="error" class="error-msg">
+                {{ error }}
+              </div>
+
               <div class="fields">
                 <div class="field">
                   <label class="field__label">Full Name</label>
                   <div class="field__wrap">
                     <svg class="field__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-                    <input v-model="regName" type="text" placeholder="Your name" class="field__input" />
+                    <input v-model="regName" type="text" placeholder="Your name" class="field__input" @keyup.enter="focusNext(regEmailRef)" />
                   </div>
                 </div>
                 <div class="field">
                   <label class="field__label">Email</label>
                   <div class="field__wrap">
                     <svg class="field__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
-                    <input v-model="regEmail" type="email" placeholder="you@example.com" class="field__input" />
+                    <input ref="regEmailRef" v-model="regEmail" type="email" placeholder="you@example.com" class="field__input" @keyup.enter="focusNext(regPassRef)" />
                   </div>
                 </div>
                 <div class="field">
                   <label class="field__label">Password</label>
                   <div class="field__wrap">
                     <svg class="field__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    <input v-model="regPassword" type="password" placeholder="Min. 8 characters" class="field__input" />
+                    <input ref="regPassRef" v-model="regPassword" type="password" placeholder="Min. 8 characters" class="field__input" @keyup.enter="focusNext(regConfirmRef)" />
                   </div>
                 </div>
                 <div class="field">
                   <label class="field__label">Confirm Password</label>
                   <div class="field__wrap">
                     <svg class="field__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 13c0 5-3.5 7.5-8 8.5C7.5 20.5 4 18 4 13V6l8-3 8 3v7z"/></svg>
-                    <input v-model="regConfirm" type="password" placeholder="••••••••" class="field__input" />
+                    <input ref="regConfirmRef" v-model="regConfirm" type="password" placeholder="••••••••" class="field__input" @keyup.enter="handleRegister" />
                   </div>
                 </div>
               </div>
-              <button class="submit-btn" @click="handleLogin">
-                Create Account
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <button class="submit-btn" :disabled="loading" @click="handleRegister">
+                <span v-if="loading">Processing...</span>
+                <template v-else>
+                  Create Account
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </template>
               </button>
               <p class="switch-hint">Already have an account? <span @click="switchTab('login')">Sign in</span></p>
             </div>
@@ -367,6 +443,21 @@ const slideOffset = computed(() => {
   box-shadow: 0 8px 40px rgba(94,231,176,0.3);
 }
 .submit-btn:active { transform: scale(0.97); }
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.error-msg {
+  background: rgba(255, 75, 75, 0.1);
+  border: 1px solid rgba(255, 75, 75, 0.2);
+  color: #ff8080;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  text-align: center;
+}
 
 .switch-hint {
   text-align: center;

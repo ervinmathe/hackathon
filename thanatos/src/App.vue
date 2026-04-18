@@ -33,8 +33,10 @@ body {
   margin: 0;
   padding: 0;
   background-color: var(--universalbackgrounbcolor);
-  color: var(--universaltextcolor);
+  color: var(--universalprimarytextcolor);
   font-family: var(--universalfontstyle);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1 {
