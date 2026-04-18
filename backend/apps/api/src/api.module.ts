@@ -11,6 +11,7 @@ import { PostsController } from './posts/posts.controller';
 import { PostsService } from './posts/posts.service';
 import { CommentsModule } from './comments/comments.module';
 import { CalendarModule } from './calendar/calendar.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { CalendarModule } from './calendar/calendar.module';
     DatabaseModule,
     CommentsModule,
     CalendarModule,
+    AiModule,
   ],
   controllers: [
     ApiController,
