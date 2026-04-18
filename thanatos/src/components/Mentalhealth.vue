@@ -289,13 +289,6 @@ onMounted(() => {
   pollingInterval = setInterval(fetchEvents, 10000)
 })
 
-<<<<<<< HEAD
-const fakePosts = computed(() => activeChannel.value ? [
-  { id: 1, user: 'ember_w', avatar: '🌿', time: '2h ago', content: `Feeling a lot better after joining ${activeChannel.value.name}. The community here really helps.`, likes: 34, comments: 12 },
-  { id: 2, user: 'nova_k', avatar: '🌙', time: '4h ago', content: 'Anyone else notice that journaling in the morning vs evening has totally different effects on mood?', likes: 58, comments: 27 },
-  { id: 3, user: 'rowan_j', avatar: '✨', time: '6h ago', content: 'Sharing this reminder: rest is productive. You don\'t have to earn rest. 💙', likes: 142, comments: 9 },
-] : [])
-
 const showDropdown = ref(false)
 
 const closeDropdown = (e) => {
@@ -307,21 +300,13 @@ function logout() {
     router.push('/')
 }
 
-</script>
-
-<template>
-  <div class="page" @click="closeDropdown()">
-    <!--@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');-->
-
-=======
 onBeforeUnmount(() => {
   if (pollingInterval) clearInterval(pollingInterval)
 })
 </script>
 
 <template>
-  <div class="page">
->>>>>>> origin/Gellért
+  <div class="page" @click="closeDropdown()">
     <!-- NAVBAR -->
     <nav class="navbar">
       <button class="back-btn" @click="router.replace('/home')">
@@ -335,33 +320,23 @@ onBeforeUnmount(() => {
         <span class="brand-sub">Mental Health</span>
       </div>
       <div class="navbar__right">
-<<<<<<< HEAD
-    <div class="profile-container" @click.stop="showDropdown = !showDropdown">
-        <div class="avatar"><span class="avatar-fallback">U</span></div>
+        <div class="profile-container" @click.stop="showDropdown = !showDropdown">
+        <div class="avatar"><span>{{ authStore.user?.username?.charAt(0).toUpperCase() || 'U' }}</span></div>
         <Transition name="dropdown">
             <div v-if="showDropdown" class="dropdown">
-                <a href="/profile" class="dropdown__item">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-                    Profile
-                </a>
-                <div class="dropdown__divider"></div>
-                <a href="#" @click="logout()" class="dropdown__item dropdown__item--danger">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    Sign Out
-                </a>
+              <a href="/profile" class="dropdown__item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                Profile
+              </a>
+              <div class="dropdown__divider"></div>
+              <a href="#" @click.prevent="handleLogout()" class="dropdown__item dropdown__item--danger">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Sign Out
+              </a>
             </div>
-        </Transition>
-    </div>
-</div>
-=======
-        <div class="role-badge" v-if="authStore.user">{{ authStore.user.role }}</div>
-        <button class="signout-btn-nav" @click="handleLogout">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Sign Out
-        </button>
-        <div class="avatar"><span>{{ authStore.user?.username?.charAt(0).toUpperCase() || 'U' }}</span></div>
+          </Transition>
+          </div>
       </div>
->>>>>>> origin/Gellért
     </nav>
 
     <div class="layout">
@@ -669,7 +644,6 @@ onBeforeUnmount(() => {
   border-radius: 8px; cursor: pointer; margin-right: 12px;
   transition: all 0.2s;
 }
-<<<<<<< HEAD
 .back-btn:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
 .navbar__brand {
   display: flex; align-items: center; gap: 8px;
@@ -691,10 +665,6 @@ onBeforeUnmount(() => {
   cursor: pointer; transition: border-color 0.2s;
 }
 .navbar__right .avatar:hover { border-color: rgba(94,231,176,0.5); }
-=======
-.signout-btn-nav:hover { background: rgba(239, 68, 68, 0.1); color: #f87171; border-color: rgba(239, 68, 68, 0.2); }
-.avatar { width: 34px; height: 34px; border-radius: 50%; background: #1e2d45; display: flex; align-items: center; justify-content: center; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); }
->>>>>>> origin/Gellért
 
 /* LAYOUT */
 .layout { display: flex; flex: 1; overflow: hidden; }
@@ -877,7 +847,7 @@ input[type="datetime-local"] {
 .empty-state { text-align: center; padding: 60px 20px; color: var(--universalsecondarytextcolor); }
 .empty-icon { font-size: 40px; margin-bottom: 16px; display: block; opacity: 0.3; }
 
-<<<<<<< HEAD
+@media (max-width: 1000px) { .right-panel { display: none; } }
 @media (max-width: 900px) {
   .right-panel { display: none; }
 }
@@ -910,7 +880,3 @@ input[type="datetime-local"] {
 .dropdown-enter-active, .dropdown-leave-active { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
 .dropdown-enter-from, .dropdown-leave-to { opacity: 0; transform: translateY(-6px) scale(0.97); }
 </style>
-=======
-@media (max-width: 1000px) { .right-panel { display: none; } }
-</style>
->>>>>>> origin/Gellért

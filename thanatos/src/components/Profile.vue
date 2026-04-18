@@ -106,9 +106,7 @@ function handleLogout() {
     <!-- NAVBAR -->
     <nav class="navbar">
       <button class="back-btn" @click="router.replace('/home')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
         Back
       </button>
       <div class="navbar__actions">
@@ -224,13 +222,8 @@ function handleLogout() {
   z-index: 100;
 }
 .back-btn {
-  display: flex;
-  align-items: center; gap: 8px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: #fff;
-  padding: 8px 16px; border-radius: 10px;
-  font-size: 14px; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; gap: 8px; background: none; border: 1px solid rgba(255,255,255,0.1);
+  color: var(--universalsecondarytextcolor); font-size: 13px; padding: 6px 16px; border-radius: 100px; cursor: pointer;
 }
 .back-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
 

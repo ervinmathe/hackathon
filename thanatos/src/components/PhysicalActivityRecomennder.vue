@@ -1,12 +1,14 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
 const showDropdown = ref(false)
 const scrolled = ref(false)
 const heroVisible = ref(false)
 const submitted = ref(false)
+const authStore = useAuthStore()
 
 const handleScroll = () => { scrolled.value = window.scrollY > 20 }
 onMounted(() => { setTimeout(() => (heroVisible.value = true), 100); window.addEventListener('scroll', handleScroll) })
@@ -17,8 +19,7 @@ const closeDropdown = (e) => {
 }
 
 function logout() {
-  localStorage.removeItem('isAuthenticated')
-  router.push('/')
+  authStore.logout(router)
 }
 
 // Form state
@@ -113,7 +114,10 @@ function goToPhysical() {
       <div class="navbar__actions">
         
         <div class="profile-container" @click.stop="showDropdown = !showDropdown">
-          <div class="avatar"><span class="avatar-fallback">U</span></div>
+          <div class="avatar">
+            <img v-if="authStore.user?.profile_url" :src="authStore.user.profile_url" alt="Profile" />
+            <span v-else class="avatar-fallback">{{ authStore.user?.username?.charAt(0).toUpperCase() || 'U' }}</span>
+          </div>
           <Transition name="dropdown">
             <div v-if="showDropdown" class="dropdown">
               <a href="/profile" class="dropdown__item">
