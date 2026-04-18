@@ -28,6 +28,16 @@ export class AskAiDto {
     description: 'A finomított kérdés, amelyet az AI megválaszol.',
   })
   refined_question: string;
+
+  @ApiProperty({
+    required: false,
+    example: [
+      { role: 'user', content: 'What is the difference between mitosis and meiosis?' },
+      { role: 'assistant', content: 'Mitosis creates two identical cells, while meiosis creates four genetically varied cells.' }
+    ],
+    description: 'Optional previous conversation messages to preserve context.'
+  })
+  conversationHistory?: { role: string; content: string }[];
 }
 
 export class SurveyResponseDto {

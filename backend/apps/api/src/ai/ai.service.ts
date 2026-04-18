@@ -56,20 +56,28 @@ export class AiService {
   }
 
 
-  async ask(refinedQuestion: string): Promise<string> {
-    console.log('--- Ask Step: Received refinedQuestion:', refinedQuestion);
+  async ask(refinedQuestion: string, conversationHistory: any[] = []): Promise<string> {
+    console.log('--- Ask Step: Received refinedQuestion:', refinedQuestion, 'conversationHistory length:', conversationHistory?.length ?? 0);
 
     if (!refinedQuestion || refinedQuestion.trim() === '') {
       console.error('--- Ask ERROR: refinedQuestion is empty!');
       return 'The question is empty, please try again.';
     }
 
+    const historyMessages = Array.isArray(conversationHistory)
+      ? conversationHistory.map((msg) => ({
+          role: msg.role === 'assistant' ? 'assistant' as const : 'user' as const,
+          content: String(msg.content)
+        }))
+      : [];
+
     try {
       const completion = await this.client.chat.completions.create({
         model: this.model,
         messages: [
-          { role: 'system', content: `Role: Expert Academic Mentor.\n${this.defaultGuidelines}\nTask: Answer the student's question adhering strictly to the guidelines.` },
-          { role: 'user', content: refinedQuestion.trim() }
+          { role: 'system' as const, content: `Role: Expert Academic Mentor.\n${this.defaultGuidelines}\nTask: Answer the student's question in detail, then ask a follow-up question to explore the topic further.` },
+          ...historyMessages,
+          { role: 'user' as const, content: refinedQuestion.trim() }
         ],
       });
       

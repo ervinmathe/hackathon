@@ -39,7 +39,7 @@ export class AiController {
   @Post('ask')
   @ApiOperation({ summary: 'Ask a refined question to the LLM' })
   async ask(@Body() dto: AskAiDto) {
-    const answer = await this.aiService.ask(dto.refined_question);
+    const answer = await this.aiService.ask(dto.refined_question, dto.conversationHistory);
     return { answer };
   }
 

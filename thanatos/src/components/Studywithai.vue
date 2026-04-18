@@ -203,6 +203,7 @@ async function sendMessage() {
   const text = chatInput.value.trim()
   if (!text || isSending.value) return
 
+  const history = [...chatMessages.value]
   chatMessages.value.push({ role: 'user', content: text })
   chatInput.value = ''
   isSending.value = true
@@ -213,7 +214,8 @@ async function sendMessage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        refined_question: text    
+        refined_question: text,
+        conversationHistory: history
       })
     })
     if (!res.ok) throw new Error('Server error')
