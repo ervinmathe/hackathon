@@ -84,4 +84,51 @@ describe('CalendarService (Unit)', () => {
         expect(result.interested).toBe(false);
     });
   });
+
+  describe('create', () => {
+    it('should create an event and auto-approve for admin', async () => {
+        const mockQuery = {
+            where: jest.fn().mockReturnThis(),
+            first: jest.fn().mockResolvedValue({ id: 'u1', role: 'ADMIN', university_id: 'uni1' }),
+            insert: jest.fn().mockReturnThis(),
+            returning: jest.fn().mockResolvedValue([{ id: 'e1', is_approved: true }])
+        };
+        knexMock.mockReturnValue(mockQuery);
+
+        const result = await service.create({ title: 'Event', created_by: 'u1' });
+        expect(result.is_approved).toBe(true);
+    });
+  });
+
+  describe('approve', () => {
+    it('should set is_approved to true', async () => {
+        const mockQuery = {
+            where: jest.fn().mockReturnThis(),
+            update: jest.fn().mockReturnThis(),
+            returning: jest.fn().mockResolvedValue([{ id: 'e1', is_approved: true }])
+        };
+        knexMock.mockReturnValue(mockQuery);
+
+        const result = await service.approve('e1');
+        expect(result.is_approved).toBe(true);
+    });
+  });
+
+  describe('findAll with filters', () => {
+    it('should apply category and university filters', async () => {
+        const mockQuery = {
+            join: jest.fn().mockReturnThis(),
+            leftJoin: jest.fn().mockReturnThis(),
+            select: jest.fn().mockReturnThis(),
+            groupBy: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            orderBy: jest.fn().mockImplementation((col, dir) => Promise.resolve([])),
+        };
+        knexMock.mockReturnValue(mockQuery);
+
+        await service.findAll('uni1', null, true, null, 'Sports');
+        expect(mockQuery.where).toHaveBeenCalledWith('calendar_events.category', 'Sports');
+        expect(mockQuery.where).toHaveBeenCalledWith('calendar_events.university_id', 'uni1');
+    });
+  });
 });

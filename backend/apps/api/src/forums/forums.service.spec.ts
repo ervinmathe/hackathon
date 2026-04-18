@@ -67,4 +67,32 @@ describe('ForumsService (Unit)', () => {
         expect(mockQuery.insert).toHaveBeenCalledWith({ user_id: 'u1', forum_id: 'f1' });
     });
   });
+
+  describe('leave', () => {
+    it('should delete join record', async () => {
+        const mockQuery = {
+            where: jest.fn().mockReturnThis(),
+            del: jest.fn().mockResolvedValue(1)
+        };
+        knexMock.mockReturnValue(mockQuery);
+
+        await service.leave('u1', 'f1');
+        expect(mockQuery.del).toHaveBeenCalled();
+    });
+  });
+
+  describe('findMyForums', () => {
+    it('should query forums joined by user', async () => {
+        const mockQuery = {
+            join: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            select: jest.fn().mockResolvedValue([{ id: 'f1' }])
+        };
+        knexMock.mockReturnValue(mockQuery);
+
+        const result = await service.findMyForums('u1');
+        expect(result).toHaveLength(1);
+        expect(mockQuery.join).toHaveBeenCalledWith('user_forums', 'forums.id', 'user_forums.forum_id');
+    });
+  });
 });

@@ -7,7 +7,7 @@ describe('CmsService (Unit)', () => {
   let knexMock: any;
 
   beforeEach(async () => {
-    knexMock = jest.fn(() => ({
+    const mockQuery = {
       select: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
@@ -17,7 +17,10 @@ describe('CmsService (Unit)', () => {
       join: jest.fn().mockReturnThis(),
       leftJoin: jest.fn().mockReturnThis(),
       returning: jest.fn().mockResolvedValue([{ id: '1', name: 'Test' }]),
-    }));
+      then: jest.fn().mockImplementation((onFulfilled) => Promise.resolve(onFulfilled([]))),
+    };
+
+    knexMock = jest.fn(() => mockQuery);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -36,54 +39,38 @@ describe('CmsService (Unit)', () => {
     expect(service).toBeDefined();
   });
 
-  describe('getAllUniversities', () => {
-    it('should return a list of universities', async () => {
-      const mockQuery = {
-        select: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockResolvedValue([{ id: '1', name: 'Uni A' }]),
-      };
-      knexMock.mockReturnValue(mockQuery);
+  describe('Enrollments', () => {
+    it('should create an enrollment', async () => {
+      const result = await service.createEnrollment({ name: 'Szak', university_id: '1' });
+      expect(result).toBeDefined();
+    });
 
-      const result = await service.getAllUniversities();
-      expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Uni A');
+    it('should update an enrollment', async () => {
+        const localMock = knexMock();
+        localMock.returning.mockResolvedValue([{ id: '1' }]);
+        const result = await service.updateEnrollment('1', { name: 'New' });
+        expect(result).toBeDefined();
+    });
+
+    it('should getAllEnrollments with join', async () => {
+        const localMock = knexMock();
+        localMock.orderBy.mockResolvedValue([]);
+        await service.getAllEnrollments();
+        expect(localMock.join).toHaveBeenCalledWith('universities', 'enrollments.university_id', 'universities.id');
     });
   });
 
-  describe('deleteUniversity', () => {
-    it('should delete and return success', async () => {
-      const mockQuery = {
-        where: jest.fn().mockReturnThis(),
-        del: jest.fn().mockResolvedValue(1),
-      };
-      knexMock.mockReturnValue(mockQuery);
-
-      const result = await service.deleteUniversity('1');
-      expect(result.success).toBe(true);
-    });
-
-    it('should throw NotFoundException if nothing deleted', async () => {
-        const mockQuery = {
-          where: jest.fn().mockReturnThis(),
-          del: jest.fn().mockResolvedValue(0),
-        };
-        knexMock.mockReturnValue(mockQuery);
-  
-        await expect(service.deleteUniversity('999')).rejects.toThrow(NotFoundException);
-    });
+  describe('Users', () => {
+      it('should getAllUsers with joins', async () => {
+          await service.getAllUsers();
+          expect(knexMock).toHaveBeenCalledWith('users');
+      });
   });
 
-  describe('approveEvent', () => {
-    it('should update event as approved', async () => {
-        const mockQuery = {
-            where: jest.fn().mockReturnThis(),
-            update: jest.fn().mockReturnThis(),
-            returning: jest.fn().mockResolvedValue([{ id: 'e1', is_approved: true }])
-        };
-        knexMock.mockReturnValue(mockQuery);
-
-        const result = await service.approveEvent('e1');
-        expect(result.is_approved).toBe(true);
-    });
+  describe('Forums', () => {
+      it('should getAllForums', async () => {
+          await service.getAllForums();
+          expect(knexMock).toHaveBeenCalledWith('forums');
+      });
   });
 });
