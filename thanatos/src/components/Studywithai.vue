@@ -6,15 +6,28 @@ import api from '../api/api'
 
 // ─── BACKEND URLS ──────────────────────────────────────────────────────────────
 // Replace these with your actual backend endpoints
-const OPTIMIZE_PROMPT_URL = 'https://YOUR_BACKEND_URL/api/ai/optimize-prompt'   // POST: receives { userId, guidelinePrompt, userAnswers } → returns { optimizedPrompt }
-const CHAT_URL            = 'https://YOUR_BACKEND_URL/api/ai/study-chat'        // POST: receives { userId, prompt, conversationHistory } → returns { reply }
+const OPTIMIZE_PROMPT_URL = 'https://millennium-shine-latter-assure.trycloudflare.com/ai/refine'   // POST: receives { userId, guidelinePrompt, userAnswers } → returns { optimizedPrompt }
+const CHAT_URL            = 'https://millennium-shine-latter-assure.trycloudflare.com/ai/study-chat'        // POST: receives { userId, prompt, conversationHistory } → returns { reply }
 // ───────────────────────────────────────────────────────────────────────────────
 
-const GUIDELINE_PROMPT = `You are an expert academic tutor helping a university student. 
-Your goal is to provide clear, structured, and pedagogically sound explanations. 
-Adapt your tone to the student's level. Break down complex topics step by step. 
-When the student is preparing for a test, provide practice questions and key concepts to focus on. 
-Always encourage the student and offer to elaborate on any point they find difficult.`
+const GUIDELINES = `
+[CONTEXT: The user is a university student. Your goal is to foster UNDERSTANDING, not just provide information.]
+Task: Reformulate the user's question to be as useful as possible for an AI to generate a high-quality educational response.
+- Feynman Technique: Explain as if to a 12-year-old; avoid jargon.
+- Analogies: Provide a real-life, easy-to-visualize analogy.
+- Visualization: Describe how to visualize the concept.
+- Step-by-Step (Scaffolding): Guide through the thought process.
+- Pitfalls: Highlight common student misunderstandings.
+- Check-for-Understanding: End with a simple, open-ended question.
+- TL;DR: Start with a 1-2 sentence summary.
+- Formatting: Use headers (##) and bold text (**) for clarity.
+- Math: Use LaTeX format for formulas.
+- Level: Assume the user is at a high-school level. Avoid university-level jargon unless necessary.
+- Tone: Direct, friendly, academic, and encouraging.
+- Context: If the purpose is unclear, append: "...and what is its practical application in studies?"
+`
+const GUIDELINE_PROMPT = `You are an academic tutor transforming confusing student questions into precise, learning-optimized prompts.`
+const combinedGuidelines = `${GUIDELINES}\n${GUIDELINE_PROMPT}`
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -164,7 +177,7 @@ async function buildAndOptimizePrompt() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId: authStore.user?.id,
-        guidelinePrompt: GUIDELINE_PROMPT,
+        guidelinePrompt: combinedGuidelines,
         userAnswers
       })
     })

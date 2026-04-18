@@ -292,9 +292,10 @@ onMounted(() => {
 const showDropdown = ref(false)
 
 const closeDropdown = (e) => {
-    if (!e.target.closest('.profile-container')) showDropdown.value = false
+  if (e && e.target && !e.target.closest('.profile-container')) {
+    showDropdown.value = false
+  }
 }
-
 function logout() {
     localStorage.removeItem('isAuthenticated')
     router.push('/')
@@ -306,7 +307,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="page" @click="closeDropdown()">
+  <div class="page" @click="closeDropdown($event)">
+
     <!-- NAVBAR -->
     <nav class="navbar">
       <button class="back-btn" @click="router.replace('/home')">

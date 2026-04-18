@@ -8,12 +8,12 @@ export class AiService {
   private readonly model = 'llama-3.3-70b-versatile';
   
   private readonly defaultGuidelines = `
-    IRÁNYELVEK:
-    1. Mindig a hallgató mentális és fizikai jólétét tartsd szem előtt.
-    2. Válaszolj empatikusan, de maradj szakmai.
-    3. Kerüld a túl bonyolult orvosi szakzsargont, magyarázd el az alapokat.
-    4. Ha a felhasználó kimerültségről beszél, javasolj konkrét pihenési technikákat.
-    5. A válaszok legyenek strukturáltak és könnyen olvashatóak.
+    GUIDELINES:
+    1. Always prioritize the student's mental and physical well-being.
+    2. Respond with empathy but maintain professional expertise.
+    3. Avoid overly complex medical jargon; explain the basics clearly.
+    4. If the student mentions exhaustion, suggest concrete relaxation techniques.
+    5. Ensure responses are structured, easy to read, and logically formatted.
   `;
 
   constructor(private configService: ConfigService) {
@@ -24,21 +24,26 @@ export class AiService {
   }
 
   async refineQuestion(question: string, preferences?: any, customGuidelines?: string): Promise<string> {
-    const userContext = preferences?.tags ? `FELHASZNÁLÓ PREFERENCIÁI: ${preferences.tags.join(', ')}` : '';
-    const activeGuidelines = customGuidelines ? `${this.defaultGuidelines}\nEGYEDI IRÁNYELVEK: ${customGuidelines}` : this.defaultGuidelines;
+    const userContext = preferences?.tags ? `USER PREFERENCES (TAGS): ${preferences.tags.join(', ')}` : '';
+    const activeGuidelines = customGuidelines 
+      ? `${this.defaultGuidelines}\nCUSTOM GUIDELINES: ${customGuidelines}` 
+      : this.defaultGuidelines;
 
     try {
       const completion = await this.client.chat.completions.create({
         model: this.model,
         messages: [
-          { role: 'system', content: `${activeGuidelines}\n${userContext}\nFeladat: Alakítsd át a kérdést profibbá.` },
+          { 
+            role: 'system', 
+            content: `${activeGuidelines}\n${userContext}\nRole: Academic Prompt Engineer. Task: Transform the user's question into a precise, learning-optimized prompt. Return ONLY the refined question.` 
+          },
           { role: 'user', content: question }
         ],
       });
-      return completion.choices[0]?.message?.content?.trim() || 'Nem érkezett válasz.';
+      return completion.choices[0]?.message?.content?.trim() || 'No response received.';
     } catch (error) {
       console.error('Groq Refine Error:', error);
-      return `Finomított (Fallback): ${question}`;
+      return `Refined (Fallback): ${question}`;
     }
   }
 
@@ -47,14 +52,14 @@ export class AiService {
       const completion = await this.client.chat.completions.create({
         model: this.model,
         messages: [
-          { role: 'system', content: this.defaultGuidelines },
+          { role: 'system', content: `Role: Expert Academic Mentor.\n${this.defaultGuidelines}\nTask: Answer the student's question adhering strictly to the guidelines.` },
           { role: 'user', content: refinedQuestion }
         ],
       });
-      return completion.choices[0]?.message?.content?.trim() || 'Sajnálom, nem sikerült válaszolni.';
+      return completion.choices[0]?.message?.content?.trim() || 'Sorry, failed to generate an answer.';
     } catch (error) {
       console.error('Groq Ask Error:', error);
-      return 'Sajnálom, hiba történt a válasz generálása közben.';
+      return 'Sorry, an error occurred while generating the response.';
     }
   }
 
@@ -63,14 +68,14 @@ export class AiService {
       const completion = await this.client.chat.completions.create({
         model: this.model,
         messages: [
-          { role: 'system', content: 'Válaszolj csak vesszővel elválasztott tagekkel, semmi mással.' },
-          { role: 'user', content: `Elemezd ezeket a válaszokat és adj vissza tageket: ${JSON.stringify(answers)}` }
+          { role: 'system', content: 'Extract interests/tags from the survey. Return ONLY a comma-separated list of tags.' },
+          { role: 'user', content: `Analyze these survey answers and extract tags: ${JSON.stringify(answers)}` }
         ],
       });
       const content = completion.choices[0]?.message?.content || '';
       return content.split(',').map((t: string) => t.trim().toLowerCase());
     } catch (error) {
-      return ['egészség', 'diákélet'];
+      return ['health', 'student-life'];
     }
   }
 
@@ -79,8 +84,8 @@ export class AiService {
       const completion = await this.client.chat.completions.create({
         model: this.model,
         messages: [
-          { role: 'system', content: 'Csak JSON formátumban válaszolj: {"recommendations": [{"id": "...", "reason": "..."}]}' },
-          { role: 'user', content: `Tagek: ${userTags.join(', ')}. Létesítmények: ${JSON.stringify(facilities)}` }
+          { role: 'system', content: 'Return ONLY JSON format: {"recommendations": [{"id": "...", "reason": "..."}]}' },
+          { role: 'user', content: `Tags: ${userTags.join(', ')}. Facilities: ${JSON.stringify(facilities)}` }
         ],
         response_format: { type: 'json_object' }
       });
