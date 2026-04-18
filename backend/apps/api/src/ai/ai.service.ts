@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
 
@@ -6,59 +6,103 @@ import { ConfigService } from '@nestjs/config';
 export class AiService {
   private genAI: GoogleGenerativeAI;
   private model: any;
+  
+  // Irányelvek a rendszer számára
+  private readonly guidelines = `
+    IRÁNYELVEK:
+    1. Mindig a hallgató mentális és fizikai jólétét tartsd szem előtt.
+    2. Válaszolj empatikusan, de maradj szakmai.
+    3. Kerüld a túl bonyolult orvosi szakzsargont, magyarázd el az alapokat.
+    4. Ha a felhasználó kimerültségről beszél, javasolj konkrét pihenési technikákat.
+    5. A válaszok legyenek strukturáltak és könnyen olvashatóak.
+  `;
 
   constructor(private configService: ConfigService) {
-    const apiKey = this.configService.get<string>('GEMINI_API_KEY') || '';
-    this.genAI = new GoogleGenerativeAI(apiKey);
-    // 2026-ban a gemini-2.0-flash vagy gemini-3-flash a standard
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const apiKey = this.configService.get<string>('GEMINI_API_KEY');
+    if (!apiKey) {
+      console.warn('GEMINI_API_KEY is missing from .env! AI features will use fallback.');
+    }
+    this.genAI = new GoogleGenerativeAI(apiKey || 'dummy_key');
+    // Próbáljuk a legstabilabb Flash nevet
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
   }
 
   /**
-   * Finomítja a felhasználó kérdését egy "Prompt Engineer" szerepkörrel.
+   * Finomítja a felhasználó kérdését az irányelvek figyelembevételével.
    */
   async refineQuestion(question: string): Promise<string> {
     const prompt = `
-      Szerepkör: Te egy profi egészségügyi tanácsadó asszisztens vagy.
-      Feladat: Finomítsd a felhasználó alábbi kérdését, hogy pontosabb, tudományosabb és könnyebben megválaszolható legyen egy LLM számára. 
-      Fókuszálj a mentális és fizikai egyensúlyra. 
-      Csak a finomított kérdést add vissza, semmi mást!
+      ${this.guidelines}
       
-      Felhasználó kérdése: "${question}"
-      Finomított változat:
+      SZEREPKÖR: Te egy egészségügyi Prompt Engineer vagy.
+      FELADAT: Alakítsd át az alábbi felhasználói kérdést egy professzionálisabb, az IRÁNYELVEKNEK megfelelő kérdéssé.
+      CSAK a finomított kérdést add vissza!
+      
+      FELHASZNÁLÓ KÉRDÉSE: "${question}"
+      FINOMÍTOTT KÉRDÉS:
     `;
 
     try {
+      if (!this.configService.get('GEMINI_API_KEY')) {
+         return `(MOCK) Refined for guidelines: ${question}`;
+      }
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       return response.text().trim();
     } catch (error) {
       console.error('Gemini Refine Error:', error);
-      return `Finomított: ${question} (hiba a generáláskor)`;
+      return `Finomított (Fallback): ${question}`;
     }
   }
 
   /**
-   * Megválaszolja a finomított kérdést.
+   * Megválaszolja a finomított kérdést az irányelvek mentén.
    */
   async ask(refinedQuestion: string): Promise<string> {
     const prompt = `
-      Szerepkör: Te egy kedves, támogató egyetemi mentor és egészségügyi szakértő vagy.
-      Kontextus: Válaszolj a felhasználó kérdésére közérthetően, de tudományosan megalapozottan. 
-      Használj Markdown formázást (listák, félkövér betűk).
-      Fontos: Ha a kérdés súlyos orvosi problémára utal, mindig javasold szakember felkeresését!
+      ${this.guidelines}
       
-      Kérdés: "${refinedQuestion}"
-      Válasz:
+      SZEREPKÖR: Szakértő egészségügyi mentor.
+      FELADAT: Válaszold meg az alábbi finomított kérdést az IRÁNYELVEK szigorú betartásával.
+      
+      KÉRDÉS: "${refinedQuestion}"
+      VÁLASZ:
     `;
 
     try {
+      if (!this.configService.get('GEMINI_API_KEY')) {
+        return `(MOCK) Ez egy szimulált válasz, mert nincs GEMINI_API_KEY beállítva. A kérdésed: ${refinedQuestion}`;
+      }
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       return response.text().trim();
     } catch (error) {
       console.error('Gemini Ask Error:', error);
-      return 'Sajnálom, technikai hiba történt a válaszadás során. Kérlek próbáld újra később!';
+      return 'Sajnálom, hiba történt a válasz generálása közben.';
+    }
+  }
+
+  /**
+   * Kulcsszavak/Tagek kinyerése a kérdőív válaszaiból.
+   */
+  async extractPreferences(answers: any): Promise<string[]> {
+    const prompt = `
+      FELADAT: Elemezd az alábbi kérdőív válaszait és adj vissza egy vesszővel elválasztott listát a felhasználó érdeklődési köreiről (tagek).
+      PÉLDA: "alvás, stresszkezelés, jóga, futás"
+      
+      VÁLASZOK: ${JSON.stringify(answers)}
+      TAGEK:
+    `;
+
+    try {
+      if (!this.configService.get('GEMINI_API_KEY')) {
+        return ['egészség', 'diákélet']; // Mock tags
+      }
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      return response.text().split(',').map((tag: string) => tag.trim().toLowerCase());
+    } catch (error) {
+      return ['general'];
     }
   }
 }

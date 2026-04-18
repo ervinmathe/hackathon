@@ -15,3 +15,15 @@ export class AskAiDto {
   })
   refined_question: string;
 }
+
+export class SurveyResponseDto {
+  @ApiProperty({
+    example: {
+      "q1": "Nem alszom jól",
+      "q2": "Sokat szorongok a vizsgák miatt",
+      "q3": "Szeretek jógázni"
+    },
+    description: 'A kérdőív válaszai objektumként'
+  })
+  answers: any;
+}
