@@ -113,15 +113,6 @@ exports.seed = async function(knex) {
 
   const cheatSheetPostId = posts[0].id;
 
-  // 6. Mellékletek felvitele (Post Attachments)
-  await knex('post_attachments').insert([
-    {
-      post_id: cheatSheetPostId,
-      file_name: 'c_cpp_mutatok_osszefoglalo.pdf',
-      file_url: '/uploads/attachments/c_cpp_mutatok_osszefoglalo.pdf',
-      file_type: 'application/pdf'
-    }
-  ]);
 
   // 7. Naptár események (Calendar Events)
   const now = new Date();
