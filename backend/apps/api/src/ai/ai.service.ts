@@ -53,15 +53,25 @@ export class AiService {
 
 
   async ask(refinedQuestion: string): Promise<string> {
+    console.log('--- Ask Step: Received refinedQuestion:', refinedQuestion);
+
+    if (!refinedQuestion || refinedQuestion.trim() === '') {
+      console.error('--- Ask ERROR: refinedQuestion is empty!');
+      return 'The question is empty, please try again.';
+    }
+
     try {
       const completion = await this.client.chat.completions.create({
         model: this.model,
         messages: [
           { role: 'system', content: `Role: Expert Academic Mentor.\n${this.defaultGuidelines}\nTask: Answer the student's question adhering strictly to the guidelines.` },
-          { role: 'user', content: refinedQuestion }
+          { role: 'user', content: refinedQuestion.trim() }
         ],
       });
-      return completion.choices[0]?.message?.content?.trim() || 'Sorry, failed to generate an answer.';
+      
+      const content = completion.choices[0]?.message?.content;
+      console.log('--- Ask SUCCESS: AI responded');
+      return content?.trim() || 'Sorry, failed to generate an answer.';
     } catch (error) {
       console.error('Groq Ask Error:', error);
       return 'Sorry, an error occurred while generating the response.';

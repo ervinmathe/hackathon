@@ -17,7 +17,6 @@ export class AiController {
   async refine(@Body() dto: RefineQuestionDto) {
     let preferences = null;
     
-    // Csak akkor kérdezzük le az adatbázisból, ha a userId valódi UUID formátumú
     if (dto.userId && dto.userId !== 'string' && dto.userId.length > 10) {
       try {
         const user = await this.knex('users').where({ id: dto.userId }).first();
@@ -27,8 +26,10 @@ export class AiController {
       }
     }
     
-    const refined = await this.aiService.refineQuestion(dto.question, preferences, dto.custom_guidelines);
-    return { refined };
+    const refinedText = await this.aiService.refineQuestion(dto.question, preferences, dto.custom_guidelines);
+    console.log('--- Controller Refine Result (Final):', refinedText);
+    
+    return { refined: refinedText };
   }
 
   @Post('ask')

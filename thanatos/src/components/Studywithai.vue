@@ -10,23 +10,11 @@ const OPTIMIZE_PROMPT_URL = 'https://millennium-shine-latter-assure.trycloudflar
 const CHAT_URL            = 'https://millennium-shine-latter-assure.trycloudflare.com/ai/ask'        // POST: receives { userId, prompt, conversationHistory } → returns { reply }
 // ───────────────────────────────────────────────────────────────────────────────
 
-const GUIDELINES = `
-[CONTEXT: The user is a university student. Your goal is to foster UNDERSTANDING, not just provide information.]
-Task: Reformulate the user's question to be as useful as possible for an AI to generate a high-quality educational response.
-- Feynman Technique: Explain as if to a 12-year-old; avoid jargon.
-- Analogies: Provide a real-life, easy-to-visualize analogy.
-- Visualization: Describe how to visualize the concept.
-- Step-by-Step (Scaffolding): Guide through the thought process.
-- Pitfalls: Highlight common student misunderstandings.
-- Check-for-Understanding: End with a simple, open-ended question.
-- TL;DR: Start with a 1-2 sentence summary.
-- Formatting: Use headers (##) and bold text (**) for clarity.
-- Math: Use LaTeX format for formulas.
-- Level: Assume the user is at a high-school level. Avoid university-level jargon unless necessary.
-- Tone: Direct, friendly, academic, and encouraging.
-- Context: If the purpose is unclear, append: "...and what is its practical application in studies?"
-`
-const GUIDELINE_PROMPT = `You are an academic tutor transforming confusing student questions into precise, learning-optimized prompts.`
+const GUIDELINES = ``
+
+const GUIDELINE_PROMPT = `Role: Prompt Engineer. Task: Take the user's question and refine it
+      into a detailed, academic prompt for an AI tutor. Apply these guidelines:
+      RETURN ONLY THE REFINED QUESTION, NO EXPLANATION.`
 const combinedGuidelines = `${GUIDELINES}\n${GUIDELINE_PROMPT}`
 
 const router = useRouter()
@@ -177,7 +165,8 @@ async function buildAndOptimizePrompt() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId: authStore.user?.id,
-        guidelinePrompt: combinedGuidelines,
+        question: userAnswers,   
+        custom_guidelines: combinedGuidelines,
         userAnswers
       })
     })
@@ -225,9 +214,7 @@ async function sendMessage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userId: authStore.user?.id,
-        prompt: text,
-        conversationHistory: chatMessages.value.slice(0, -1)
+        refined_question: text    
       })
     })
     if (!res.ok) throw new Error('Server error')
