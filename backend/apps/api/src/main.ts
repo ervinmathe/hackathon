@@ -1,9 +1,13 @@
 import { NestFactory } from '@nestjs/core';
-import { ApiModule } from './api.module';
-import { NestExpressApplication } from '@nestjs/platform-express';
+import * as dotenv from 'dotenv';
 import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import * as express from 'express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { ApiModule } from './api.module';
+
+// Kényszerített betöltés
+dotenv.config({ path: join(process.cwd(), '.env') });
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(ApiModule);
@@ -44,4 +48,3 @@ async function bootstrap() {
   console.log(`API Swagger Docs: http://localhost:${port}/docs`);
 }
 bootstrap();
-

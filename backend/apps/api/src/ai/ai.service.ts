@@ -1,11 +1,11 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import OpenAI from 'openai';
 
 @Injectable()
 export class AiService {
-  private genAI: GoogleGenerativeAI;
-  private model: any;
+  private client: OpenAI;
+  private readonly model = 'llama-3.3-70b-versatile';
   
   private readonly defaultGuidelines = `
     IRÁNYELVEK:
@@ -17,116 +17,78 @@ export class AiService {
   `;
 
   constructor(private configService: ConfigService) {
-    const apiKey = this.configService.get<string>('GEMINI_API_KEY');
-    this.genAI = new GoogleGenerativeAI(apiKey || 'dummy_key');
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    this.client = new OpenAI({
+      apiKey: this.configService.get<string>('GROQ_API_KEY'),
+      baseURL: 'https://api.groq.com/openai/v1',
+    });
   }
 
-  /**
-   * Finomítja a felhasználó kérdését az irányelvek és a preferenciák figyelembevételével.
-   */
   async refineQuestion(question: string, preferences?: any, customGuidelines?: string): Promise<string> {
-    const userContext = preferences && preferences.tags 
-      ? `FELHASZNÁLÓ PREFERENCIÁI (TAGEK): ${preferences.tags.join(', ')}`
-      : '';
-
-    const activeGuidelines = customGuidelines 
-      ? `${this.defaultGuidelines}\nEGYEDI IRÁNYELVEK: ${customGuidelines}` 
-      : this.defaultGuidelines;
-
-    const prompt = `
-      ${activeGuidelines}
-      
-      ${userContext}
-      
-      SZEREPKÖR: Te egy egészségügyi Prompt Engineer vagy.
-      FELADAT: Alakítsd át az alábbi felhasználói kérdést egy professzionálisabb, az IRÁNYELVEKNEK és a FELHASZNÁLÓI PREFERENCIÁKNAK megfelelő kérdéssé.
-      Ha vannak preferenciák, próbáld beleszőni őket (pl. ha szeret jógázni, a kérdés kérdezzen rá a jógára is).
-      CSAK a finomított kérdést add vissza!
-      
-      FELHASZNÁLÓ KÉRDÉSE: "${question}"
-      FINOMÍTOTT KÉRDÉS:
-    `;
+    const userContext = preferences?.tags ? `FELHASZNÁLÓ PREFERENCIÁI: ${preferences.tags.join(', ')}` : '';
+    const activeGuidelines = customGuidelines ? `${this.defaultGuidelines}\nEGYEDI IRÁNYELVEK: ${customGuidelines}` : this.defaultGuidelines;
 
     try {
-      if (!this.configService.get('GEMINI_API_KEY')) {
-         return `(MOCK) Refined with prefs [${preferences?.tags || 'none'}]: ${question}`;
-      }
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      return response.text().trim();
+      const completion = await this.client.chat.completions.create({
+        model: this.model,
+        messages: [
+          { role: 'system', content: `${activeGuidelines}\n${userContext}\nFeladat: Alakítsd át a kérdést profibbá.` },
+          { role: 'user', content: question }
+        ],
+      });
+      return completion.choices[0]?.message?.content?.trim() || 'Nem érkezett válasz.';
     } catch (error) {
-      console.error('Gemini Refine Error:', error);
+      console.error('Groq Refine Error:', error);
       return `Finomított (Fallback): ${question}`;
     }
   }
 
   async ask(refinedQuestion: string): Promise<string> {
-    const prompt = `
-      ${this.defaultGuidelines}
-      SZEREPKÖR: Szakértő egészségügyi mentor.
-      FELADAT: Válaszold meg az alábbi finomított kérdést az IRÁNYELVEK szigorú betartásával.
-      KÉRDÉS: "${refinedQuestion}"
-      VÁLASZ:
-    `;
-
     try {
-      if (!this.configService.get('GEMINI_API_KEY')) {
-        return `(MOCK) Answer for: ${refinedQuestion}`;
-      }
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      return response.text().trim();
+      const completion = await this.client.chat.completions.create({
+        model: this.model,
+        messages: [
+          { role: 'system', content: this.defaultGuidelines },
+          { role: 'user', content: refinedQuestion }
+        ],
+      });
+      return completion.choices[0]?.message?.content?.trim() || 'Sajnálom, nem sikerült válaszolni.';
     } catch (error) {
-      console.error('Gemini Ask Error:', error);
+      console.error('Groq Ask Error:', error);
       return 'Sajnálom, hiba történt a válasz generálása közben.';
     }
   }
 
   async extractPreferences(answers: any): Promise<string[]> {
-    const prompt = `
-      FELADAT: Elemezd az alábbi kérdőív válaszait és adj vissza egy vesszővel elválasztott listát a felhasználó érdeklődési köreiről (tagek).
-      PÉLDA: "alvás, stresszkezelés, jóga, futás"
-      VÁLASZOK: ${JSON.stringify(answers)}
-      TAGEK:
-    `;
-
     try {
-      if (!this.configService.get('GEMINI_API_KEY')) {
-        return ['alvás', 'stresszkezelés'];
-      }
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      return response.text().split(',').map((tag: string) => tag.trim().toLowerCase());
+      const completion = await this.client.chat.completions.create({
+        model: this.model,
+        messages: [
+          { role: 'system', content: 'Válaszolj csak vesszővel elválasztott tagekkel, semmi mással.' },
+          { role: 'user', content: `Elemezd ezeket a válaszokat és adj vissza tageket: ${JSON.stringify(answers)}` }
+        ],
+      });
+      const content = completion.choices[0]?.message?.content || '';
+      return content.split(',').map((t: string) => t.trim().toLowerCase());
     } catch (error) {
-      return ['general'];
+      return ['egészség', 'diákélet'];
     }
   }
 
-  /**
-   * Létesítmények és felhasználói preferenciák párosítása.
-   */
   async matchFacilities(userTags: string[], facilities: any[]): Promise<any[]> {
-    const prompt = `
-      FELHASZNÁLÓ TAGEK: ${userTags.join(', ')}
-      LÉTESÍTMÉNYEK: ${JSON.stringify(facilities.map(f => ({ id: f.id, name: f.name, tags: f.tags })))}
-      
-      FELADAT: Rangsorold a fenti létesítményeket a felhasználói tagek alapján. 
-      Csak azokat a létesítményeket add vissza JSON listában, amik relevánsak. 
-      Minden elem tartalmazza: { "id": "...", "reason": "Rövid indoklás, miért ajánlod" }
-      VÁLASZ CSUPASZ JSON LEGYEN!
-    `;
-
     try {
-      if (!this.configService.get('GEMINI_API_KEY')) {
-        return facilities.slice(0, 2).map(f => ({ id: f.id, reason: 'Ez egy szimulált ajánlás.' }));
-      }
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text().replace(/```json|```/g, '').trim();
-      return JSON.parse(text);
+      const completion = await this.client.chat.completions.create({
+        model: this.model,
+        messages: [
+          { role: 'system', content: 'Csak JSON formátumban válaszolj: {"recommendations": [{"id": "...", "reason": "..."}]}' },
+          { role: 'user', content: `Tagek: ${userTags.join(', ')}. Létesítmények: ${JSON.stringify(facilities)}` }
+        ],
+        response_format: { type: 'json_object' }
+      });
+      const content = completion.choices[0]?.message?.content;
+      if (!content) return [];
+      const result = JSON.parse(content);
+      return result.recommendations || [];
     } catch (error) {
-      console.error('Facility Matching Error:', error);
       return [];
     }
   }

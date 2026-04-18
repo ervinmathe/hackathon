@@ -16,9 +16,15 @@ export class AiController {
   @ApiOperation({ summary: 'Refine a raw user question using guidelines and preferences' })
   async refine(@Body() dto: RefineQuestionDto) {
     let preferences = null;
-    if (dto.userId) {
-      const user = await this.knex('users').where({ id: dto.userId }).first();
-      preferences = user?.preferences;
+    
+    // Csak akkor kérdezzük le az adatbázisból, ha a userId valódi UUID formátumú
+    if (dto.userId && dto.userId !== 'string' && dto.userId.length > 10) {
+      try {
+        const user = await this.knex('users').where({ id: dto.userId }).first();
+        preferences = user?.preferences;
+      } catch (e) {
+        console.warn('Invalid userId format, skipping preferences load');
+      }
     }
     
     const refined = await this.aiService.refineQuestion(dto.question, preferences, dto.custom_guidelines);

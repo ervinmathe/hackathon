@@ -13,9 +13,14 @@ import { CommentsModule } from './comments/comments.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { AiModule } from './ai/ai.module';
 
+import { join } from 'path';
+
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ 
+      isGlobal: true,
+      envFilePath: join(process.cwd(), '.env'),
+    }),
     DatabaseModule,
     CommentsModule,
     CalendarModule,
